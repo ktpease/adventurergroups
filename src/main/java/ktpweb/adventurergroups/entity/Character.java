@@ -26,6 +26,10 @@ public class Character
     private Boolean isDeleted;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "instance_id")
+    private Instance instance;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "maintainer_id")
     private UserAccount maintainer;
 

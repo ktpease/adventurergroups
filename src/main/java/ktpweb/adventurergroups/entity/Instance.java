@@ -26,7 +26,7 @@ public class Instance
     @Setter(AccessLevel.NONE)
     private Long id;
 
-    private Boolean isDeleted;
+    private Boolean isActive;
 
     private String subdomainName;
     private String displayName;
@@ -39,9 +39,12 @@ public class Instance
     private Set<UserAccount> maintainers;
     
     @OneToMany(mappedBy = "instance", cascade = CascadeType.ALL)
-    private Set<CharacterGroup> characterGroup;
+    private Set<Character> characters;
+
+    @OneToMany(mappedBy = "instance", cascade = CascadeType.ALL)
+    private Set<CharacterGroup> characterGroups;
 
     // Logging
     private LocalDateTime createDate;
-    private LocalDateTime deleteDate;
+    private LocalDateTime lastInactiveDate;
 }

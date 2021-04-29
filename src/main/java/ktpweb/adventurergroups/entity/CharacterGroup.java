@@ -26,15 +26,15 @@ public class CharacterGroup
     @Setter(AccessLevel.NONE)
     private Long id;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "instance_id")
+    private Instance instance;
+
     private Boolean isDeleted;
 
     private String name;
     private String snippet;
     private Integer colorPrimary;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "instance_id")
-    private Instance instance;
 
     @OneToMany(mappedBy = "characterGroup", cascade = CascadeType.ALL)
     private Set<Character> characters;
