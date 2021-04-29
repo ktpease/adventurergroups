@@ -7,11 +7,11 @@ import lombok.EqualsAndHashCode;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
-public class Maintainer extends UserAccount
+public class MaintainerDto extends UserAccountDto
 {
-    private Instance parentInstance;
+    private InstanceDto parentInstance;
 
-    private Set<Character> characters;
+    private Set<CharacterDto> characters;
 
     private Boolean isTransient;
     private String inviteToken;

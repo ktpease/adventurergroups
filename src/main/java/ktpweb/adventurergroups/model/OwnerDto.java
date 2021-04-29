@@ -7,7 +7,7 @@ import lombok.EqualsAndHashCode;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
-public class Owner extends UserAccount
+public class OwnerDto extends UserAccountDto
 {
-    private Set<Instance> instances;
+    private Set<InstanceDto> instances;
 }

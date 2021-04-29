@@ -6,7 +6,7 @@ import java.util.Set;
 import lombok.Data;
 
 @Data
-public class Instance {
+public class InstanceDto {
     private Long id;
 
     private Boolean isActive;
@@ -15,11 +15,11 @@ public class Instance {
     private String displayName;
     private String description;
 
-    private Owner owner;
-    private Set<Maintainer> maintainers;
+    private OwnerDto owner;
+    private Set<MaintainerDto> maintainers;
 
     private Set<Character> characters;
-    private Set<CharacterGroup> characterGroups;
+    private Set<CharacterGroupDto> characterGroups;
 
     private LocalDateTime createDate;
     private LocalDateTime lastInactiveDate;
