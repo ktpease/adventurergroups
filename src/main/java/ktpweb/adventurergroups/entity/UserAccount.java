@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.Set;
 
 import javax.persistence.CascadeType;
+import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
@@ -17,11 +18,14 @@ import javax.persistence.OneToMany;
 
 import ktpweb.adventurergroups.util.UserAccountUtils.UserAccountRoles;
 import lombok.AccessLevel;
-import lombok.Data;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Data
+@Getter
+@Setter
+@NoArgsConstructor
 public class UserAccount
 {
     @Id
@@ -34,9 +38,15 @@ public class UserAccount
     @Enumerated(EnumType.ORDINAL)
     private UserAccountRoles role;
 
+    @Column(length = 20)
     private String username;
+
     private String password;
+
+    @Column(length = 50)
     private String email;
+
+    @Column(length = 50)
     private String displayname;
 
     // Multi-instance (Owners)

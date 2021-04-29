@@ -2,6 +2,7 @@ package ktpweb.adventurergroups.entity;
 
 import java.time.LocalDateTime;
 
+import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
@@ -11,11 +12,15 @@ import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 
 import lombok.AccessLevel;
-import lombok.Data;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-@Entity
-@Data
+// Character is a reserved keyword in some databases.
+@Entity(name = "characterobject")
+@Getter
+@Setter
+@NoArgsConstructor
 public class Character
 {
     @Id
@@ -37,9 +42,14 @@ public class Character
     @JoinColumn(name = "group_id")
     private CharacterGroup characterGroup;
 
+    @Column(length = 50)
     private String name;
-    private String snippet;
+
+    @Column(length = 200)
+    private String description;
+
     private Integer colorPrimary;
+
     private Integer colorSecondary;
 
     // Logging
@@ -47,7 +57,7 @@ public class Character
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by_id")
     private UserAccount createdBy;
-    
+
     private LocalDateTime createDate;
     private LocalDateTime deleteDate;
 }

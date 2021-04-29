@@ -15,7 +15,7 @@ public class Character {
     private CharacterGroup characterGroup;
 
     private String name;
-    private String snippet;
+    private String description;
     private Integer colorPrimary;
     private Integer colorSecondary;
 

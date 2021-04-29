@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.Set;
 
 import javax.persistence.CascadeType;
+import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
@@ -14,11 +15,14 @@ import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 
 import lombok.AccessLevel;
-import lombok.Data;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Data
+@Getter
+@Setter
+@NoArgsConstructor
 public class CharacterGroup
 {
     @Id
@@ -32,8 +36,12 @@ public class CharacterGroup
 
     private Boolean isDeleted;
 
+    @Column(length = 50)
     private String name;
-    private String snippet;
+
+    @Column(length = 200)
+    private String description;
+
     private Integer colorPrimary;
 
     @OneToMany(mappedBy = "characterGroup", cascade = CascadeType.ALL)

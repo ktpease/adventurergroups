@@ -12,7 +12,7 @@ public class CharacterGroup {
     private Instance instance;
 
     private String name;
-    private String snippet;
+    private String description;
     private Integer colorPrimary;
 
     private Set<Character> characters;

@@ -13,6 +13,7 @@ public class Instance {
 
     private String subdomainName;
     private String displayName;
+    private String description;
 
     private Owner owner;
     private Set<Maintainer> maintainers;
