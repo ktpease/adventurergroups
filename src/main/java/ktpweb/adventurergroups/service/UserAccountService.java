@@ -80,7 +80,7 @@ public class UserAccountService
             throw new UserAccountServiceException(
                 "Cannot create Admin with username '" + username
                     + "'. Incorrect username.",
-                UserAccountServiceException.Codes.BAD_USERNAME);
+                UserAccountServiceException.Codes.INVALID_USERNAME);
         }
 
         // Incorrect password.
@@ -93,12 +93,12 @@ public class UserAccountService
             throw new UserAccountServiceException(
                 "Cannot create Admin with username '" + username
                     + "'. Incorrect password.",
-                UserAccountServiceException.Codes.BAD_PASSWORD);
+                UserAccountServiceException.Codes.INVALID_PASSWORD);
         }
 
         // Check to see if an admin or owner with the same username and password
         // exists.
-        if (existsInGlobalExampleMatcher(username, email))
+        if (accountExistsInGlobal(username, email))
         {
             log.info(
                 "Account with the same username or non-null email already exists! Username = {}, email = {}",
@@ -106,7 +106,7 @@ public class UserAccountService
 
             throw new UserAccountServiceException(
                 "Account with the same username or non-null email already exists! Username = '"
-                    + username + "'', email = '" + email + "'",
+                    + username + "', email = '" + email + "'",
                 UserAccountServiceException.Codes.ACCOUNT_EXISTS);
         }
 
@@ -129,7 +129,72 @@ public class UserAccountService
         return getAdminDtoFromUserAccount(newAccount);
     }
 
-    private Boolean existsInGlobalExampleMatcher(String username, String email)
+    public OwnerDto createOwner(String username, String password, String email,
+        String displayname) throws UserAccountServiceException
+    {
+        log.info("Attempting to create Owner account with username '{}'",
+            username);
+
+        // Incorrect username.
+        if (!StringUtils.hasText(username))
+        {
+            log.info(
+                "Cannot create Owner with username '{}'. Incorrect username.",
+                username);
+
+            throw new UserAccountServiceException(
+                "Cannot create Owner with username '" + username
+                    + "'. Incorrect username.",
+                UserAccountServiceException.Codes.INVALID_USERNAME);
+        }
+
+        // Incorrect password.
+        if (!StringUtils.hasText(password))
+        {
+            log.info(
+                "Cannot create Owner with username '{}'. Incorrect password.",
+                username);
+
+            throw new UserAccountServiceException(
+                "Cannot create Owner with username '" + username
+                    + "'. Incorrect password.",
+                UserAccountServiceException.Codes.INVALID_PASSWORD);
+        }
+
+        // Check to see if an admin or owner with the same username and password
+        // exists.
+        if (accountExistsInGlobal(username, email))
+        {
+            log.info(
+                "Account with the same username or non-null email already exists! Username = {}, email = {}",
+                username, email);
+
+            throw new UserAccountServiceException(
+                "Account with the same username or non-null email already exists! Username = '"
+                    + username + "', email = '" + email + "'",
+                UserAccountServiceException.Codes.ACCOUNT_EXISTS);
+        }
+
+        // Generate database entity.
+        UserAccount newAccount = new UserAccount();
+
+        newAccount.setUsername(username);
+        newAccount.setPassword(password);
+        newAccount.setEmail(email);
+        newAccount.setDisplayname(
+            StringUtils.hasText(displayname) ? displayname : username);
+        newAccount.setRole(UserAccountRoles.USER_ROLE_OWNER);
+        newAccount.setCreateDate(LocalDateTime.now());
+
+        newAccount = userAccountRepository.save(newAccount);
+
+        log.info("Created Owner account with username '{}', id {}", username,
+            newAccount.getId());
+
+        return getOwnerDtoFromUserAccount(newAccount);
+    }
+
+    private Boolean accountExistsInGlobal(String username, String email)
     {
         log.debug(
             "Searching for existance of Global user account with username '{}' and/or email '{}",
@@ -141,7 +206,8 @@ public class UserAccountService
         if (StringUtils.hasText(email))
             probe.setEmail(email);
 
-        ExampleMatcher matcher = ExampleMatcher.matchingAny().withIgnoreCase();
+        ExampleMatcher matcher = ExampleMatcher.matchingAny().withIgnoreCase()
+            .withIgnorePaths("role");
 
         // Check for Admins first.
         probe.setRole(UserAccountRoles.USER_ROLE_ADMIN);
@@ -158,14 +224,27 @@ public class UserAccountService
 
     private AdminDto getAdminDtoFromUserAccount(UserAccount ua)
     {
-        AdminDto newAccountDto = new AdminDto();
+        AdminDto dto = new AdminDto();
 
-        newAccountDto.setId(ua.getId());
-        newAccountDto.setUsername(ua.getUsername());
-        newAccountDto.setEmail(ua.getEmail());
-        newAccountDto.setDisplayname(ua.getDisplayname());
-        newAccountDto.setCreateDate(ua.getCreateDate());
+        dto.setId(ua.getId());
+        dto.setUsername(ua.getUsername());
+        dto.setEmail(ua.getEmail());
+        dto.setDisplayname(ua.getDisplayname());
+        dto.setCreateDate(ua.getCreateDate());
 
-        return newAccountDto;
+        return dto;
+    }
+
+    private OwnerDto getOwnerDtoFromUserAccount(UserAccount ua)
+    {
+        OwnerDto dto = new OwnerDto();
+
+        dto.setId(ua.getId());
+        dto.setUsername(ua.getUsername());
+        dto.setEmail(ua.getEmail());
+        dto.setDisplayname(ua.getDisplayname());
+        dto.setCreateDate(ua.getCreateDate());
+
+        return dto;
     }
 }

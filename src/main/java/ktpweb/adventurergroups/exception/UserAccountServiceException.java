@@ -31,7 +31,7 @@ public class UserAccountServiceException extends Exception
     public static enum Codes
     {
         ACCOUNT_EXISTS,
-        BAD_USERNAME,
-        BAD_PASSWORD
+        INVALID_USERNAME,
+        INVALID_PASSWORD
     }
 }
