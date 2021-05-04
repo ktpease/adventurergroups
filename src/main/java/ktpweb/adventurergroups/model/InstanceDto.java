@@ -6,7 +6,8 @@ import java.util.Set;
 import lombok.Data;
 
 @Data
-public class InstanceDto {
+public class InstanceDto
+{
     private Long id;
 
     private Boolean isActive;

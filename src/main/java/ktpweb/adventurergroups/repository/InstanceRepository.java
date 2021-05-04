@@ -2,9 +2,9 @@ package ktpweb.adventurergroups.repository;
 
 import org.springframework.data.repository.CrudRepository;
 
-import ktpweb.adventurergroups.entity.UserAccount;
+import ktpweb.adventurergroups.entity.Instance;
 
-public interface InstanceRepository extends CrudRepository<UserAccount, Long>
+public interface InstanceRepository extends CrudRepository<Instance, Long>
 {
 
 }

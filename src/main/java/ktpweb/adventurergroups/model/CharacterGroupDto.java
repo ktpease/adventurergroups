@@ -6,7 +6,8 @@ import java.util.Set;
 import lombok.Data;
 
 @Data
-public class CharacterGroupDto {
+public class CharacterGroupDto
+{
     private Long id;
 
     private InstanceDto instance;

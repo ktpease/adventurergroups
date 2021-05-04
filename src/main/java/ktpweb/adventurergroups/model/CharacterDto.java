@@ -5,7 +5,8 @@ import java.time.LocalDateTime;
 import lombok.Data;
 
 @Data
-public class CharacterDto {
+public class CharacterDto
+{
     private Long id;
 
     private InstanceDto instance;

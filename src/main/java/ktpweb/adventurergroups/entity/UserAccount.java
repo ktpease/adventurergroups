@@ -55,7 +55,7 @@ public class UserAccount
 
     // Single-instance (Maintainers)
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "instance_id", nullable = false)
+    @JoinColumn(name = "instance_id")
     private Instance parentInstance;
 
     @OneToMany(mappedBy = "maintainer", cascade = CascadeType.ALL)
