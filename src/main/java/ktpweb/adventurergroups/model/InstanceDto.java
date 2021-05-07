@@ -16,12 +16,13 @@ public class InstanceDto
     private String displayName;
     private String description;
 
-    private OwnerDto owner;
-    private Set<MaintainerDto> maintainers;
+    private Long ownerId;
+    private Set<Long> maintainerIds;
 
-    private Set<Character> characters;
-    private Set<CharacterGroupDto> characterGroups;
+    private Set<Long> characterIds;
+    private Set<Long> characterGroupIds;
 
     private LocalDateTime createDate;
-    private LocalDateTime lastInactiveDate;
+    private LocalDateTime lastActivateDate;
+    private LocalDateTime lastDeactivateDate;
 }

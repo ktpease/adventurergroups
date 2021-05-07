@@ -28,7 +28,7 @@ public class Character
     @Setter(AccessLevel.NONE)
     private Long id;
 
-    private Boolean isDeleted;
+    private Boolean deleted;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "instance_id")

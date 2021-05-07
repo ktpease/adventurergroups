@@ -33,7 +33,7 @@ public class UserAccount
     @Setter(AccessLevel.NONE)
     private Long id;
 
-    private Boolean isDeleted;
+    private Boolean deleted;
 
     @Enumerated(EnumType.ORDINAL)
     private UserAccountRoles role;

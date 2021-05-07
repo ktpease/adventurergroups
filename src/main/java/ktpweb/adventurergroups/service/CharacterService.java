@@ -1,7 +1,6 @@
 package ktpweb.adventurergroups.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.stereotype.Service;
 
 import ktpweb.adventurergroups.entity.Character;
@@ -22,29 +21,38 @@ public class CharacterService
     @Autowired
     private CharacterGroupRepository characterGroupRepository;
 
-    public Character getCharacter(CharacterDto characterDto)
+    public Character getCharacter(Long id) throws Exception
     {
         try
         {
-            return characterRepository.findById(characterDto.getId())
-                .orElse(null);
+            return characterRepository.findById(id).orElse(null);
         }
-        catch (InvalidDataAccessApiUsageException e)
+        catch (IllegalArgumentException iae)
+        {
+            return null;
+        }
+    }
+
+    public Character getCharacter(CharacterDto characterDto) throws Exception
+    {
+        return getCharacter(characterDto.getId());
+    }
+
+    public CharacterGroup getCharacterGroup(Long id) throws Exception
+    {
+        try
+        {
+            return characterGroupRepository.findById(id).orElse(null);
+        }
+        catch (IllegalArgumentException e)
         {
             return null;
         }
     }
 
     public CharacterGroup getCharacterGroup(CharacterGroupDto characterGroupDto)
+        throws Exception
     {
-        try
-        {
-            return characterGroupRepository.findById(characterGroupDto.getId())
-                .orElse(null);
-        }
-        catch (InvalidDataAccessApiUsageException e)
-        {
-            return null;
-        }
+        return getCharacterGroup(characterGroupDto.getId());
     }
 }

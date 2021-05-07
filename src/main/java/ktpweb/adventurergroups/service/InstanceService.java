@@ -1,7 +1,6 @@
 package ktpweb.adventurergroups.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.stereotype.Service;
 
 import ktpweb.adventurergroups.entity.Instance;
@@ -16,16 +15,20 @@ public class InstanceService
     @Autowired
     private InstanceRepository instanceRepository;
 
-    public Instance getInstance(InstanceDto instanceDto)
+    public Instance getInstance(Long id) throws Exception
     {
         try
         {
-            return instanceRepository.findById(instanceDto.getId())
-                .orElse(null);
+            return instanceRepository.findById(id).orElse(null);
         }
-        catch (InvalidDataAccessApiUsageException e)
+        catch (IllegalArgumentException iae)
         {
             return null;
         }
+    }
+
+    public Instance getInstance(InstanceDto instanceDto) throws Exception
+    {
+        return getInstance(instanceDto.getId());
     }
 }

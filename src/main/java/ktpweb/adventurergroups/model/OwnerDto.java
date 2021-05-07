@@ -9,5 +9,5 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 public class OwnerDto extends UserAccountDto
 {
-    private Set<InstanceDto> instances;
+    private Set<Long> instanceIds;
 }

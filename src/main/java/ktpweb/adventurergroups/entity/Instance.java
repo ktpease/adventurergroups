@@ -30,7 +30,9 @@ public class Instance
     @Setter(AccessLevel.NONE)
     private Long id;
 
-    private Boolean isActive;
+    private Boolean active;
+    
+    private Boolean deleted;
 
     @Column(length = 20)
     private String subdomainName;
@@ -56,5 +58,6 @@ public class Instance
 
     // Logging
     private LocalDateTime createDate;
-    private LocalDateTime lastInactiveDate;
+    private LocalDateTime lastActivateDate;
+    private LocalDateTime lastDeactivateDate;
 }

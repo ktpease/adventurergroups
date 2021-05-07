@@ -9,11 +9,9 @@ public class CharacterDto
 {
     private Long id;
 
-    private InstanceDto instance;
-
-    private UserAccountDto maintainer;
-
-    private CharacterGroupDto characterGroup;
+    private Long instanceId;
+    private Long maintainerId;
+    private Long characterGroupId;
 
     private String name;
     private String description;

@@ -9,9 +9,9 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 public class MaintainerDto extends UserAccountDto
 {
-    private InstanceDto parentInstance;
+    private Long parentInstanceId;
 
-    private Set<CharacterDto> characters;
+    private Set<Long> characterIds;
 
     private Boolean isTransient;
     private String inviteToken;

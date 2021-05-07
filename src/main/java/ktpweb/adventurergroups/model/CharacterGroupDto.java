@@ -16,7 +16,7 @@ public class CharacterGroupDto
     private String description;
     private Integer colorPrimary;
 
-    private Set<Character> characters;
+    private Set<Long> characterIds;
 
     private LocalDateTime createDate;
 }
