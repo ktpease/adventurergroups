@@ -24,6 +24,7 @@ import ktpweb.adventurergroups.model.CharacterDto;
 import ktpweb.adventurergroups.model.InstanceDto;
 import ktpweb.adventurergroups.model.MaintainerDto;
 import ktpweb.adventurergroups.model.OwnerDto;
+import ktpweb.adventurergroups.model.UserAccountDto;
 import ktpweb.adventurergroups.repository.UserAccountRepository;
 import ktpweb.adventurergroups.util.UserAccountUtils.UserAccountRoles;
 import lombok.extern.slf4j.Slf4j;
@@ -41,11 +42,16 @@ public class UserAccountService
     @Autowired
     private CharacterService characterService;
 
-    public UserAccount getUserAccount(Long id) throws Exception
+    protected UserAccount getUserAccount(Long id) throws Exception
     {
         try
         {
-            return userAccountRepository.findById(id).orElse(null);
+            UserAccount userAccount = userAccountRepository.findById(id)
+                .orElse(null);
+
+            return (userAccount != null && !userAccount.getDeleted())
+                ? userAccount
+                : null;
         }
         catch (IllegalArgumentException iae)
         {
@@ -53,20 +59,10 @@ public class UserAccountService
         }
     }
 
-    public UserAccount getUserAccount(AdminDto adminDto) throws Exception
-    {
-        return getUserAccount(adminDto.getId());
-    }
-
-    public UserAccount getUserAccount(OwnerDto ownerDto) throws Exception
-    {
-        return getUserAccount(ownerDto.getId());
-    }
-
-    public UserAccount getUserAccount(MaintainerDto maintainerDto)
+    protected UserAccount getUserAccount(UserAccountDto userAccountDto)
         throws Exception
     {
-        return getUserAccount(maintainerDto.getId());
+        return getUserAccount(userAccountDto.getId());
     }
 
     @Transactional
@@ -126,6 +122,7 @@ public class UserAccountService
             StringUtils.hasText(displayname) ? displayname : username);
         accountEntity.setRole(UserAccountRoles.USER_ROLE_ADMIN);
         accountEntity.setCreateDate(LocalDateTime.now());
+        accountEntity.setDeleted(false);
 
         try
         {
@@ -222,6 +219,7 @@ public class UserAccountService
             StringUtils.hasText(displayname) ? displayname : username);
         accountEntity.setRole(UserAccountRoles.USER_ROLE_OWNER);
         accountEntity.setCreateDate(LocalDateTime.now());
+        accountEntity.setDeleted(false);
 
         try
         {
@@ -319,6 +317,7 @@ public class UserAccountService
         accountEntity.setInviteToken("newrandomtoken");
         accountEntity.setParentInstance(instanceEntity);
         accountEntity.setCreateDate(LocalDateTime.now());
+        accountEntity.setDeleted(false);
 
         try
         {

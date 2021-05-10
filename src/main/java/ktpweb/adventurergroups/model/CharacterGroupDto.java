@@ -10,7 +10,7 @@ public class CharacterGroupDto
 {
     private Long id;
 
-    private InstanceDto instance;
+    private Long instanceId;
 
     private String name;
     private String description;

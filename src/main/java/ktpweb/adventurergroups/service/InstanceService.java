@@ -33,13 +33,16 @@ public class InstanceService
     @Autowired
     private UserAccountService userAccountService;
 
-    private final String DEFAULT_INSTANCE = "New Instance";
+    private final String DEFAULT_NAME = "New Instance";
 
-    public Instance getInstance(Long id) throws Exception
+    protected Instance getInstance(Long id) throws Exception
     {
         try
         {
-            return instanceRepository.findById(id).orElse(null);
+            Instance instance = instanceRepository.findById(id).orElse(null);
+
+            return (instance != null && !instance.getDeleted()) ? instance
+                : null;
         }
         catch (IllegalArgumentException iae)
         {
@@ -47,7 +50,7 @@ public class InstanceService
         }
     }
 
-    public Instance getInstance(InstanceDto instanceDto) throws Exception
+    protected Instance getInstance(InstanceDto instanceDto) throws Exception
     {
         return getInstance(instanceDto.getId());
     }
@@ -142,8 +145,9 @@ public class InstanceService
         instanceEntity.setActive(false);
         instanceEntity.setOwner(ownerEntity);
         instanceEntity.setSubdomainName(subdomainName);
-        instanceEntity.setDisplayName(DEFAULT_INSTANCE);
+        instanceEntity.setDisplayName(DEFAULT_NAME);
         instanceEntity.setCreateDate(LocalDateTime.now());
+        instanceEntity.setDeleted(false);
 
         try
         {
