@@ -16,6 +16,9 @@ import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 
+import org.hibernate.annotations.Fetch;
+import org.hibernate.annotations.FetchMode;
+
 import ktpweb.adventurergroups.util.UserAccountUtils.UserAccountRoles;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -51,6 +54,7 @@ public class UserAccount
 
     // Multi-instance (Owners)
     @OneToMany(mappedBy = "owner", cascade = CascadeType.ALL)
+    @Fetch(FetchMode.SUBSELECT)
     private Set<Instance> instances;
 
     // Single-instance (Maintainers)
@@ -59,6 +63,7 @@ public class UserAccount
     private Instance parentInstance;
 
     @OneToMany(mappedBy = "maintainer", cascade = CascadeType.ALL)
+    @Fetch(FetchMode.SUBSELECT)
     private Set<Character> characters;
 
     private String inviteToken;

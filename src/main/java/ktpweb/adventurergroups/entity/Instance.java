@@ -14,6 +14,9 @@ import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 
+import org.hibernate.annotations.Fetch;
+import org.hibernate.annotations.FetchMode;
+
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -48,12 +51,15 @@ public class Instance
     private UserAccount owner;
 
     @OneToMany(mappedBy = "parentInstance", cascade = CascadeType.ALL)
+    @Fetch(FetchMode.SUBSELECT)
     private Set<UserAccount> maintainers;
     
     @OneToMany(mappedBy = "instance", cascade = CascadeType.ALL)
+    @Fetch(FetchMode.SUBSELECT)
     private Set<Character> characters;
 
     @OneToMany(mappedBy = "instance", cascade = CascadeType.ALL)
+    @Fetch(FetchMode.SUBSELECT)
     private Set<CharacterGroup> characterGroups;
 
     // Logging

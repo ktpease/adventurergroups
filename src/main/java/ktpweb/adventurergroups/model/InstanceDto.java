@@ -10,7 +10,7 @@ public class InstanceDto
 {
     private Long id;
 
-    private Boolean isActive;
+    private Boolean active;
 
     private String subdomainName;
     private String displayName;

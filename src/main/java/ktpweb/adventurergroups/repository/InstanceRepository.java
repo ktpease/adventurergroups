@@ -1,10 +1,10 @@
 package ktpweb.adventurergroups.repository;
 
-import org.springframework.data.repository.CrudRepository;
+import org.springframework.data.jpa.repository.JpaRepository;
 
 import ktpweb.adventurergroups.entity.Instance;
 
-public interface InstanceRepository extends CrudRepository<Instance, Long>
+public interface InstanceRepository extends JpaRepository<Instance, Long>
 {
 
 }

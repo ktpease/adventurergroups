@@ -30,12 +30,18 @@ public class UserAccountServiceException extends Exception
 
     public static enum Codes
     {
-        DATABASE_ERROR,
+        DATABASE_ERROR_READ,
+        DATABASE_ERROR_WRITE,
         NULL_ACCOUNT_OBJECT,
-        ACCOUNT_EXISTS,
+        ACCOUNT_NOT_FOUND,
+        ACCOUNT_ALREADY_EXISTS,
+        ACCOUNT_ALREADY_REGISTERED,
         INVALID_USERNAME,
         INVALID_PASSWORD,
+        INVALID_ROLE,
+        CHARACTER_NOT_FOUND,
         INVALID_CHARACTER_OBJECT,
-        INVALID_INSTANCE_OBJECT
+        INSTANCE_NOT_FOUND,
+        INVALID_INSTANCE_OBJECT,
     }
 }

@@ -14,6 +14,9 @@ import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 
+import org.hibernate.annotations.Fetch;
+import org.hibernate.annotations.FetchMode;
+
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -45,6 +48,7 @@ public class CharacterGroup
     private Integer colorPrimary;
 
     @OneToMany(mappedBy = "characterGroup", cascade = CascadeType.ALL)
+    @Fetch(FetchMode.SUBSELECT)
     private Set<Character> characters;
 
     // Logging
