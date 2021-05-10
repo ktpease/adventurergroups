@@ -55,20 +55,24 @@ public class InstanceService
         return getInstance(instanceDto.getId());
     }
 
+    private final String EXCEPTION_PRIMER_CREATE = "Cannot create Instance for owner User Account id: ";
+    private final String EXCEPTION_PRIMER_ACTIVATE = "Cannot activate Instance with id: ";
+    private final String EXCEPTION_PRIMER_DEACTIVATE = "Cannot deactivate Instance with id: ";
+
+    private final String EXCEPTION_PRIMER_MODEL = "Cannot return model for Instance with id: ";
+
     @Transactional
     public InstanceDto createInstance(OwnerDto owner, String subdomainName)
         throws InstanceServiceException
     {
         if (owner == null)
         {
-            log.info("Attempted creation of an instance with a null Owner.");
-
-            throw new InstanceServiceException(
-                InstanceServiceException.Codes.INVALID_OWNER_OBJECT,
-                "Attempted creation of an instance with a null Owner.");
+            throw generateException(
+                "Attempted creation of an Instance with a null owner User Account",
+                InstanceServiceException.Codes.INVALID_OWNER_OBJECT);
         }
 
-        log.info("Attempting to create Instance for owner account id {}",
+        log.info("Attempting to create Instance for owner User Account id: {}",
             owner.getId());
 
         UserAccount ownerEntity;
@@ -77,66 +81,46 @@ public class InstanceService
         {
             ownerEntity = userAccountService.getUserAccount(owner);
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            log.info(
-                "Cannot create Instance for owner account id {}. Error reading owner from database.",
-                owner.getId());
-
-            throw new InstanceServiceException(
-                InstanceServiceException.Codes.DATABASE_ERROR_READ,
-                "Cannot create Instance for owner account id " + owner.getId()
-                    + ". Error reading from database.",
-                e);
+            throw generateException(
+                EXCEPTION_PRIMER_CREATE + owner.getId()
+                    + ". Error reading User Account from database",
+                InstanceServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
 
         if (ownerEntity == null)
         {
-            log.info(
-                "Cannot create Instance for owner account id {}. Owner not found.",
-                owner.getId());
-
-            throw new InstanceServiceException(
-                InstanceServiceException.Codes.OWNER_NOT_FOUND,
-                "Cannot create Instance for owner account id " + owner.getId()
-                    + ". Owner not found.");
+            throw generateException(
+                EXCEPTION_PRIMER_CREATE + owner.getId()
+                    + ". User Account not found",
+                InstanceServiceException.Codes.OWNER_NOT_FOUND);
         }
 
         if (ownerEntity.getRole() != UserAccountRoles.USER_ROLE_OWNER)
         {
-            log.info(
-                "Cannot create Instance for owner account id {}. User account is not an owner role!",
-                owner.getId());
-
-            throw new InstanceServiceException(
-                InstanceServiceException.Codes.INVALID_OWNER_ROLE,
-                "Cannot create Instance for owner account id " + owner.getId()
-                    + ". User account is not an owner role!");
+            throw generateException(
+                EXCEPTION_PRIMER_CREATE + owner.getId()
+                    + ". User Account is not an owner role",
+                InstanceServiceException.Codes.INVALID_OWNER_ROLE);
         }
 
-        // Incorrect subdomain name.
+        // Invalid subdomain name.
         if (!StringUtils.hasText(subdomainName))
         {
-            log.info(
-                "Cannot create Instance for owner account id {}. Invalid subdomain name",
-                owner.getId());
-
-            throw new InstanceServiceException(
-                InstanceServiceException.Codes.INVALID_SUBDOMAINNAME,
-                "Cannot create Instance for owner account id " + owner.getId()
-                    + ". Invalid subdomain name");
+            throw generateException(
+                EXCEPTION_PRIMER_CREATE + owner.getId()
+                    + ". Invalid subdomain name",
+                InstanceServiceException.Codes.INVALID_SUBDOMAINNAME);
         }
 
         // Check to see if an instance with the same subdomain name exists.
         if (instanceExists(subdomainName))
         {
-            log.info("Account with subdomain '{}' already exists!",
-                subdomainName);
-
-            throw new InstanceServiceException(
-                InstanceServiceException.Codes.INSTANCE_ALREADY_EXISTS,
-                "Account with subdomain '" + subdomainName
-                    + "' already exists!");
+            throw generateException(
+                EXCEPTION_PRIMER_CREATE + owner.getId()
+                    + ". Subdomain already exists",
+                InstanceServiceException.Codes.INSTANCE_ALREADY_EXISTS);
         }
 
         // Generate database entity.
@@ -153,20 +137,15 @@ public class InstanceService
         {
             instanceEntity = instanceRepository.save(instanceEntity);
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            log.info(
-                "Cannot create Instance for owner account id {}. Error writing to database.",
-                owner.getId());
-
-            throw new InstanceServiceException(
-                InstanceServiceException.Codes.DATABASE_ERROR_WRITE,
-                "Cannot create Instance for owner account id " + owner.getId()
-                    + ". Error writing to database.",
-                e);
+            throw generateException(
+                EXCEPTION_PRIMER_CREATE + owner.getId()
+                    + ". Error writing to database",
+                InstanceServiceException.Codes.DATABASE_ERROR_WRITE, ex);
         }
 
-        log.info("Created Instance with id {}", instanceEntity.getId());
+        log.info("Created Instance with id: {}", instanceEntity.getId());
 
         try
         {
@@ -176,17 +155,12 @@ public class InstanceService
 
             return getInstanceDto(instanceEntity);
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            log.info(
-                "Cannot return model for instance id {}. Error reading from database.",
-                instanceEntity.getId());
-
-            throw new InstanceServiceException(
-                InstanceServiceException.Codes.DATABASE_ERROR_READ,
-                "Cannot return model for instance id " + instanceEntity.getId()
-                    + ". Error reading from database.",
-                e);
+            throw generateException(
+                EXCEPTION_PRIMER_MODEL + instanceEntity.getId()
+                    + ". Error reading from database",
+                InstanceServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
     }
 
@@ -196,14 +170,11 @@ public class InstanceService
     {
         if (instance == null)
         {
-            log.info("Attempted activation of a null instance.");
-
-            throw new InstanceServiceException(
-                InstanceServiceException.Codes.NULL_INSTANCE_OBJECT,
-                "Attempted activation of a null instance.");
+            throw generateException("Attempted activation of a null Instance",
+                InstanceServiceException.Codes.NULL_INSTANCE_OBJECT);
         }
 
-        log.info("Attempting to activate Instance id {}", instance.getId());
+        log.info("Attempting to activate Instance id: {}", instance.getId());
 
         // Read instance from database.
         Instance instanceEntity;
@@ -212,29 +183,20 @@ public class InstanceService
         {
             instanceEntity = getInstance(instance);
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            log.info(
-                "Cannot activate Instance id {}. Error reading from database.",
-                instance.getId());
-
-            throw new InstanceServiceException(
-                InstanceServiceException.Codes.DATABASE_ERROR_READ,
-                "Cannot activate Instance id " + instance.getId()
-                    + ". Error reading from database.",
-                e);
+            throw generateException(
+                EXCEPTION_PRIMER_ACTIVATE + instance.getId()
+                    + ". Error reading from database",
+                InstanceServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
 
         if (instanceEntity == null)
         {
-            log.info(
-                "Cannot activate Instance id {}. Instance not found in database.",
-                instance.getId());
-
-            throw new InstanceServiceException(
-                InstanceServiceException.Codes.INSTANCE_NOT_FOUND,
-                "Cannot activate Instance id " + instance.getId()
-                    + ". Instance not found in database.");
+            throw generateException(
+                EXCEPTION_PRIMER_ACTIVATE + instance.getId()
+                    + ". Instance not found in database",
+                InstanceServiceException.Codes.INSTANCE_NOT_FOUND);
         }
 
         // Attempt to modify and save instance.
@@ -245,20 +207,15 @@ public class InstanceService
         {
             instanceEntity = instanceRepository.save(instanceEntity);
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            log.info(
-                "Cannot activate Instance id {}. Error writing to database.",
-                instance.getId());
-
-            throw new InstanceServiceException(
-                InstanceServiceException.Codes.DATABASE_ERROR_WRITE,
-                "Cannot activate Instance id " + instance.getId()
-                    + ". Error writing to database.",
-                e);
+            throw generateException(
+                EXCEPTION_PRIMER_ACTIVATE + instance.getId()
+                    + ". Error writing to database",
+                InstanceServiceException.Codes.DATABASE_ERROR_WRITE, ex);
         }
 
-        log.info("Activated Instance with id {}", instanceEntity.getId());
+        log.info("Activated Instance with id: {}", instanceEntity.getId());
 
         try
         {
@@ -268,17 +225,12 @@ public class InstanceService
 
             return getInstanceDto(instanceEntity);
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            log.info(
-                "Cannot return model for instance id {}. Error reading from database.",
-                instance.getId());
-
-            throw new InstanceServiceException(
-                InstanceServiceException.Codes.DATABASE_ERROR_READ,
-                "Cannot return model for instance id " + instance.getId()
-                    + ". Error reading from database.",
-                e);
+            throw generateException(
+                EXCEPTION_PRIMER_MODEL + instance.getId()
+                    + ". Error reading from database",
+                InstanceServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
     }
 
@@ -288,14 +240,11 @@ public class InstanceService
     {
         if (instance == null)
         {
-            log.info("Attempted deactivation of a null instance.");
-
-            throw new InstanceServiceException(
-                InstanceServiceException.Codes.NULL_INSTANCE_OBJECT,
-                "Attempted deactivation of a null instance.");
+            throw generateException("Attempted deactivation of a null Instance",
+                InstanceServiceException.Codes.NULL_INSTANCE_OBJECT);
         }
 
-        log.info("Attempting to deactivate Instance id {}", instance.getId());
+        log.info("Attempting to deactivate Instance id: {}", instance.getId());
 
         // Read instance from database.
         Instance instanceEntity;
@@ -304,29 +253,20 @@ public class InstanceService
         {
             instanceEntity = getInstance(instance);
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            log.info(
-                "Cannot deactivate Instance id {}. Error reading from database.",
-                instance.getId());
-
-            throw new InstanceServiceException(
-                InstanceServiceException.Codes.DATABASE_ERROR_READ,
-                "Cannot deactivate Instance id " + instance.getId()
-                    + ". Error reading from database.",
-                e);
+            throw generateException(
+                EXCEPTION_PRIMER_DEACTIVATE + instance.getId()
+                    + ". Error reading from database",
+                InstanceServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
 
         if (instanceEntity == null)
         {
-            log.info(
-                "Cannot deactivate Instance id {}. Instance not found in database.",
-                instance.getId());
-
-            throw new InstanceServiceException(
-                InstanceServiceException.Codes.INSTANCE_NOT_FOUND,
-                "Cannot deactivate Instance id " + instance.getId()
-                    + ". Instance not found in database.");
+            throw generateException(
+                EXCEPTION_PRIMER_DEACTIVATE + instance.getId()
+                    + ". Instance not found in database",
+                InstanceServiceException.Codes.INSTANCE_NOT_FOUND);
         }
 
         // Attempt to modify and save instance.
@@ -337,20 +277,15 @@ public class InstanceService
         {
             instanceEntity = instanceRepository.save(instanceEntity);
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            log.info(
-                "Cannot deactivate Instance id {}. Error writing to database.",
-                instance.getId());
-
-            throw new InstanceServiceException(
-                InstanceServiceException.Codes.DATABASE_ERROR_WRITE,
-                "Cannot deactivate Instance id " + instance.getId()
-                    + ". Error writing to database.",
-                e);
+            throw generateException(
+                EXCEPTION_PRIMER_DEACTIVATE + instance.getId()
+                    + ". Error writing to database",
+                InstanceServiceException.Codes.DATABASE_ERROR_WRITE, ex);
         }
 
-        log.info("Deactivated Instance with id {}", instanceEntity.getId());
+        log.info("Deactivated Instance with id: {}", instanceEntity.getId());
 
         try
         {
@@ -360,23 +295,18 @@ public class InstanceService
 
             return getInstanceDto(instanceEntity);
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            log.info(
-                "Cannot return model for Instance id {}. Error reading from database.",
-                instance.getId());
-
-            throw new InstanceServiceException(
-                InstanceServiceException.Codes.DATABASE_ERROR_READ,
-                "Cannot return model for Instance id " + instance.getId()
-                    + ". Error reading from database.",
-                e);
+            throw generateException(
+                EXCEPTION_PRIMER_MODEL + instance.getId()
+                    + ". Error reading from database",
+                InstanceServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
     }
 
     private Boolean instanceExists(String subdomainName)
     {
-        log.debug("Searching for existance of Instance with subdomainName '{}'",
+        log.debug("Searching for existance of Instance with subdomain name: {}",
             subdomainName);
 
         Instance probe = new Instance();
@@ -387,6 +317,22 @@ public class InstanceService
             .withIgnorePaths("deleted");
 
         return instanceRepository.exists(Example.of(probe, matcher));
+    }
+
+    private InstanceServiceException generateException(String message,
+        InstanceServiceException.Codes code)
+    {
+        log.error(message);
+
+        return new InstanceServiceException(code, message);
+    }
+
+    private InstanceServiceException generateException(String message,
+        InstanceServiceException.Codes code, Exception ex)
+    {
+        log.error(message, ex);
+
+        return new InstanceServiceException(code, message, ex);
     }
 
     public InstanceDto getInstanceDto(Instance instance) throws Exception

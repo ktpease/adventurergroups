@@ -42,6 +42,19 @@ public class UserAccountService
     @Autowired
     private CharacterService characterService;
 
+    private final String EXCEPTION_PRIMER_ADMIN_CREATE = "Cannot create Admin account with username: ";
+
+    private final String EXCEPTION_PRIMER_OWNER_CREATE = "Cannot create Owner account with username: ";
+
+    private final String EXCEPTION_PRIMER_MAINTAINER_CREATE_FOR_INSTANCE = "Cannot create transient Maintainer account on Instance id: ";
+    private final String EXCEPTION_PRIMER_MAINTAINER_CREATE_FOR_CHARACTER = "Cannot create transient Maintainer account for Character id: ";
+    private final String EXCEPTION_PRIMER_MAINTAINER_REGISTER = "Cannot register transient Maintainer account with id: ";
+
+    private final String EXCEPTION_PRIMER_ADMIN_MODEL = "Cannot return model for Admin account with id: ";
+    private final String EXCEPTION_PRIMER_OWNER_MODEL = "Cannot return model for Owner account with id: ";
+    private final String EXCEPTION_PRIMER_MAINTAINER_MODEL = "Cannot return model for Maintainer account with id: ";
+    private final String EXCEPTION_PRIMER_TRANSIENT_MODEL = "Cannot return model for transient Maintainer account with id: ";
+
     protected UserAccount getUserAccount(Long id) throws Exception
     {
         try
@@ -69,47 +82,33 @@ public class UserAccountService
     public AdminDto createAdmin(String username, String password, String email,
         String displayname) throws UserAccountServiceException
     {
-        log.info("Attempting to create Admin account with username '{}'",
+        log.info("Attempting to create Admin account with username: {}",
             username);
 
-        // Incorrect username.
+        // Invalid username.
         if (!StringUtils.hasText(username))
         {
-            log.info(
-                "Cannot create Admin with username '{}'. Incorrect username.",
-                username);
-
-            throw new UserAccountServiceException(
-                UserAccountServiceException.Codes.INVALID_USERNAME,
-                "Cannot create Admin with username '" + username
-                    + "'. Incorrect username.");
+            throw generateException(
+                EXCEPTION_PRIMER_ADMIN_CREATE + username + ". Invalid username",
+                UserAccountServiceException.Codes.INVALID_USERNAME);
         }
 
-        // Incorrect password.
+        // Invalid password.
         if (!StringUtils.hasText(password))
         {
-            log.info(
-                "Cannot create Admin with username '{}'. Incorrect password.",
-                username);
-
-            throw new UserAccountServiceException(
-                UserAccountServiceException.Codes.INVALID_PASSWORD,
-                "Cannot create Admin with username '" + username
-                    + "'. Incorrect password.");
+            throw generateException(
+                EXCEPTION_PRIMER_ADMIN_CREATE + username + ". Invalid password",
+                UserAccountServiceException.Codes.INVALID_PASSWORD);
         }
 
         // Check to see if an admin or owner with the same username and password
         // exists.
         if (accountExistsInGlobal(username, email))
         {
-            log.info(
-                "Account with the same username or non-null email already exists! Username = {}, email = {}",
-                username, email);
-
-            throw new UserAccountServiceException(
-                UserAccountServiceException.Codes.ACCOUNT_ALREADY_EXISTS,
-                "Account with the same username or non-null email already exists! Username = '"
-                    + username + "', email = '" + email + "'");
+            throw generateException(
+                "Account with the same username or non-null email already exists! Username = "
+                    + username + ", email = " + email,
+                UserAccountServiceException.Codes.ACCOUNT_ALREADY_EXISTS);
         }
 
         // Generate database entity.
@@ -128,37 +127,27 @@ public class UserAccountService
         {
             accountEntity = userAccountRepository.save(accountEntity);
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            log.info(
-                "Cannot create Admin with username {}. Error writing to database.",
-                username);
-
-            throw new UserAccountServiceException(
-                UserAccountServiceException.Codes.DATABASE_ERROR_WRITE,
-                "Cannot create Admin with username " + username
-                    + ". Error writing to database.",
-                e);
+            throw generateException(
+                EXCEPTION_PRIMER_ADMIN_CREATE + username
+                    + ". Error writing to database",
+                UserAccountServiceException.Codes.DATABASE_ERROR_WRITE, ex);
         }
 
-        log.info("Created Admin account with username '{}', id {}", username,
+        log.info("Created Admin account with username: {}, id: {}", username,
             accountEntity.getId());
 
         try
         {
             return getAdminDto(accountEntity);
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            log.info(
-                "Cannot return model for user account id {}. Error reading from database.",
-                accountEntity.getId());
-
-            throw new UserAccountServiceException(
-                UserAccountServiceException.Codes.DATABASE_ERROR_READ,
-                "Cannot return model for user account id "
-                    + accountEntity.getId() + ". Error reading from database.",
-                e);
+            throw generateException(
+                EXCEPTION_PRIMER_ADMIN_MODEL + accountEntity.getId()
+                    + ". Error reading from database",
+                UserAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
     }
 
@@ -166,47 +155,33 @@ public class UserAccountService
     public OwnerDto createOwner(String username, String password, String email,
         String displayname) throws UserAccountServiceException
     {
-        log.info("Attempting to create Owner account with username '{}'",
+        log.info("Attempting to create Owner account with username: {}",
             username);
 
-        // Incorrect username.
+        // Invalid username.
         if (!StringUtils.hasText(username))
         {
-            log.info(
-                "Cannot create Owner with username '{}'. Incorrect username.",
-                username);
-
-            throw new UserAccountServiceException(
-                UserAccountServiceException.Codes.INVALID_USERNAME,
-                "Cannot create Owner with username '" + username
-                    + "'. Incorrect username.");
+            throw generateException(
+                EXCEPTION_PRIMER_OWNER_CREATE + username + ". Invalid username",
+                UserAccountServiceException.Codes.INVALID_USERNAME);
         }
 
-        // Incorrect password.
+        // Invalid password.
         if (!StringUtils.hasText(password))
         {
-            log.info(
-                "Cannot create Owner with username '{}'. Incorrect password.",
-                username);
-
-            throw new UserAccountServiceException(
-                UserAccountServiceException.Codes.INVALID_PASSWORD,
-                "Cannot create Owner with username '" + username
-                    + "'. Incorrect password.");
+            throw generateException(
+                EXCEPTION_PRIMER_OWNER_CREATE + username + ". Invalid password",
+                UserAccountServiceException.Codes.INVALID_PASSWORD);
         }
 
         // Check to see if an admin or owner with the same username and password
         // exists.
         if (accountExistsInGlobal(username, email))
         {
-            log.info(
-                "Account with the same username or non-null email already exists! Username = {}, email = {}",
-                username, email);
-
-            throw new UserAccountServiceException(
-                UserAccountServiceException.Codes.ACCOUNT_ALREADY_EXISTS,
-                "Account with the same username or non-null email already exists! Username = '"
-                    + username + "', email = '" + email + "'");
+            throw generateException(
+                "Account with the same username or non-null email already exists! Username = "
+                    + username + ", email = " + email,
+                UserAccountServiceException.Codes.ACCOUNT_ALREADY_EXISTS);
         }
 
         // Generate database entity.
@@ -225,20 +200,15 @@ public class UserAccountService
         {
             accountEntity = userAccountRepository.save(accountEntity);
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            log.info(
-                "Cannot create Owner with username {}. Error writing to database.",
-                username);
-
-            throw new UserAccountServiceException(
-                UserAccountServiceException.Codes.DATABASE_ERROR_WRITE,
-                "Cannot create Owner with username " + username
-                    + ". Error writing to database.",
-                e);
+            throw generateException(
+                EXCEPTION_PRIMER_OWNER_CREATE + username
+                    + ". Error writing to database",
+                UserAccountServiceException.Codes.DATABASE_ERROR_WRITE, ex);
         }
 
-        log.info("Created Owner account with username '{}', id {}", username,
+        log.info("Created Owner account with username: {}, id: {}", username,
             accountEntity.getId());
 
         try
@@ -247,17 +217,12 @@ public class UserAccountService
 
             return getOwnerDto(accountEntity);
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            log.info(
-                "Cannot return model for user account id {}. Error reading from database.",
-                accountEntity.getId());
-
-            throw new UserAccountServiceException(
-                UserAccountServiceException.Codes.DATABASE_ERROR_READ,
-                "Cannot return model for user account id "
-                    + accountEntity.getId() + ". Error reading from database.",
-                e);
+            throw generateException(
+                EXCEPTION_PRIMER_OWNER_MODEL + accountEntity.getId()
+                    + ". Error reading from database",
+                UserAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
     }
 
@@ -267,16 +232,13 @@ public class UserAccountService
     {
         if (parentInstance == null)
         {
-            log.info(
-                "Attempted creation of a transient maintainer on a null instance.");
-
-            throw new UserAccountServiceException(
-                UserAccountServiceException.Codes.INVALID_INSTANCE_OBJECT,
-                "Attempted creation of a transient maintainer on a null instance.");
+            throw generateException(
+                "Attempted creation of a transient Maintainer account on a null Instance",
+                UserAccountServiceException.Codes.INVALID_INSTANCE_OBJECT);
         }
 
         log.info(
-            "Attempting to create transient Maintainer account on instance id {}",
+            "Attempting to create transient Maintainer account on instance id: {}",
             parentInstance.getId());
 
         Instance instanceEntity;
@@ -285,29 +247,21 @@ public class UserAccountService
         {
             instanceEntity = instanceService.getInstance(parentInstance);
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            log.info(
-                "Cannot create transient Maintainer on instance id {}. Error reading from database.",
-                parentInstance.getId());
-
-            throw new UserAccountServiceException(
-                UserAccountServiceException.Codes.DATABASE_ERROR_READ,
-                "Cannot create transient Maintainer on instance id "
-                    + parentInstance.getId() + ". Error reading from database.",
-                e);
+            throw generateException(
+                EXCEPTION_PRIMER_MAINTAINER_CREATE_FOR_INSTANCE
+                    + parentInstance.getId()
+                    + ". Error reading Instance from database",
+                UserAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
 
         if (instanceEntity == null)
         {
-            log.info(
-                "Cannot create transient Maintainer on instance id {}. Instance not found.",
-                parentInstance.getId());
-
-            throw new UserAccountServiceException(
-                UserAccountServiceException.Codes.INSTANCE_NOT_FOUND,
-                "Cannot create transient Maintainer on instance id "
-                    + parentInstance.getId() + ". Instance not found.");
+            throw generateException(
+                EXCEPTION_PRIMER_MAINTAINER_CREATE_FOR_INSTANCE
+                    + parentInstance.getId() + ". Instance not found",
+                UserAccountServiceException.Codes.INSTANCE_NOT_FOUND);
         }
 
         // Generate database entity.
@@ -323,20 +277,15 @@ public class UserAccountService
         {
             accountEntity = userAccountRepository.save(accountEntity);
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            log.info(
-                "Cannot create transient Maintainer on instance id {}. Error writing to database.",
-                parentInstance.getId());
-
-            throw new UserAccountServiceException(
-                UserAccountServiceException.Codes.DATABASE_ERROR_WRITE,
-                "Cannot create transient Maintainer on instance id "
-                    + parentInstance.getId() + ". Error writing to database.",
-                e);
+            throw generateException(
+                EXCEPTION_PRIMER_MAINTAINER_CREATE_FOR_INSTANCE
+                    + parentInstance.getId() + ". Error writing to database",
+                UserAccountServiceException.Codes.DATABASE_ERROR_WRITE, ex);
         }
 
-        log.info("Created transient Maintainer account with id {}",
+        log.info("Created transient Maintainer account with id: {}",
             accountEntity.getId());
 
         try
@@ -345,17 +294,12 @@ public class UserAccountService
 
             return getMaintainerDto(accountEntity);
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            log.info(
-                "Cannot return model for user account id {}. Error reading from database.",
-                accountEntity.getId());
-
-            throw new UserAccountServiceException(
-                UserAccountServiceException.Codes.DATABASE_ERROR_READ,
-                "Cannot return model for user account id "
-                    + accountEntity.getId() + ". Error reading from database.",
-                e);
+            throw generateException(
+                EXCEPTION_PRIMER_TRANSIENT_MODEL + accountEntity.getId()
+                    + ". Error reading from database",
+                UserAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
     }
 
@@ -365,16 +309,13 @@ public class UserAccountService
     {
         if (character == null)
         {
-            log.info(
-                "Attempted creation of a transient maintainer on a null character.");
-
-            throw new UserAccountServiceException(
-                UserAccountServiceException.Codes.INVALID_CHARACTER_OBJECT,
-                "Attempted creation of a transient maintainer on a null character.");
+            throw generateException(
+                "Attempted creation of a transient Maintainer acount on a null Character",
+                UserAccountServiceException.Codes.INVALID_CHARACTER_OBJECT);
         }
 
         log.info(
-            "Attempting to create transient Maintainer account for character id {}",
+            "Attempting to create transient Maintainer account for Character id: {}",
             character.getId());
 
         Character characterEntity;
@@ -383,29 +324,21 @@ public class UserAccountService
         {
             characterEntity = characterService.getCharacter(character);
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            log.info(
-                "Cannot create transient Maintainer for character id {}. Error reading from database.",
-                character.getId());
-
-            throw new UserAccountServiceException(
-                UserAccountServiceException.Codes.DATABASE_ERROR_READ,
-                "Cannot create transient Maintainer for character id "
-                    + character.getId() + ". Error reading from database.",
-                e);
+            throw generateException(
+                EXCEPTION_PRIMER_MAINTAINER_CREATE_FOR_CHARACTER
+                    + character.getId()
+                    + ". Error reading Character from database",
+                UserAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
 
         if (characterEntity == null)
         {
-            log.info(
-                "Cannot create transient Maintainer for character id {}. Character not found.",
-                character.getId());
-
-            throw new UserAccountServiceException(
-                UserAccountServiceException.Codes.CHARACTER_NOT_FOUND,
-                "Cannot create transient Maintainer for character id "
-                    + character.getId() + ". Character not found.");
+            throw generateException(
+                EXCEPTION_PRIMER_MAINTAINER_CREATE_FOR_CHARACTER
+                    + character.getId() + ". Character not found",
+                UserAccountServiceException.Codes.CHARACTER_NOT_FOUND);
         }
 
         Instance instanceEntity;
@@ -415,29 +348,21 @@ public class UserAccountService
             instanceEntity = instanceService
                 .getInstance(character.getInstanceId());
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            log.info(
-                "Cannot create transient Maintainer for character id {}. Error reading from database.",
-                character.getId());
-
-            throw new UserAccountServiceException(
-                UserAccountServiceException.Codes.DATABASE_ERROR_READ,
-                "Cannot create transient Maintainer for character id "
-                    + character.getId() + ". Error reading from database.",
-                e);
+            throw generateException(
+                EXCEPTION_PRIMER_MAINTAINER_CREATE_FOR_CHARACTER
+                    + character.getId()
+                    + ". Error reading Instance from database",
+                UserAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
 
         if (instanceEntity == null)
         {
-            log.info(
-                "Cannot create transient Maintainer for character id {}. Incorrect instance object.",
-                character.getId());
-
-            throw new UserAccountServiceException(
-                UserAccountServiceException.Codes.INVALID_INSTANCE_OBJECT,
-                "Cannot create transient Maintainer for character id "
-                    + character.getId() + ". Incorrect instance object.");
+            throw generateException(
+                EXCEPTION_PRIMER_MAINTAINER_CREATE_FOR_CHARACTER
+                    + character.getId() + ". Invalid instance object",
+                UserAccountServiceException.Codes.INVALID_INSTANCE_OBJECT);
         }
 
         // Generate database entity.
@@ -455,20 +380,15 @@ public class UserAccountService
         {
             accountEntity = userAccountRepository.save(accountEntity);
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            log.info(
-                "Cannot create transient Maintainer for character id {}. Error writing to database.",
-                character.getId());
-
-            throw new UserAccountServiceException(
-                UserAccountServiceException.Codes.DATABASE_ERROR_WRITE,
-                "Cannot create transient Maintainer for character id "
-                    + character.getId() + ". Error writing to database.",
-                e);
+            throw generateException(
+                EXCEPTION_PRIMER_MAINTAINER_CREATE_FOR_CHARACTER
+                    + character.getId() + ". Error writing to database",
+                UserAccountServiceException.Codes.DATABASE_ERROR_WRITE, ex);
         }
 
-        log.info("Created transient Maintainer account with id {}",
+        log.info("Created transient Maintainer account with id: {}",
             accountEntity.getId());
 
         try
@@ -477,17 +397,12 @@ public class UserAccountService
 
             return getMaintainerDto(accountEntity);
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            log.info(
-                "Cannot return model for user account id {}. Error reading from database.",
-                accountEntity.getId());
-
-            throw new UserAccountServiceException(
-                UserAccountServiceException.Codes.DATABASE_ERROR_READ,
-                "Cannot return model for user account id "
-                    + accountEntity.getId() + ". Error reading from database.",
-                e);
+            throw generateException(
+                EXCEPTION_PRIMER_TRANSIENT_MODEL + character.getId()
+                    + ". Error reading from database",
+                UserAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
     }
 
@@ -498,15 +413,13 @@ public class UserAccountService
     {
         if (transientMaintainer == null)
         {
-            log.info("Attempted registration of a null transient maintainer.");
-
-            throw new UserAccountServiceException(
-                UserAccountServiceException.Codes.NULL_ACCOUNT_OBJECT,
-                "Attempted registration of a null transient maintainer.");
+            throw generateException(
+                "Attempted registration of a null transient Maintainer account",
+                UserAccountServiceException.Codes.NULL_ACCOUNT_OBJECT);
         }
 
         log.info(
-            "Attempting to register Maintainer account id {} with username '{}'",
+            "Attempting to register transient Maintainer account id: {} with username: {}",
             transientMaintainer.getId(), username);
 
         Instance instanceEntity;
@@ -516,70 +429,49 @@ public class UserAccountService
             instanceEntity = instanceService
                 .getInstance(transientMaintainer.getParentInstanceId());
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            log.info(
-                "Cannot register Maintainer with id {}. Error reading from database.",
-                transientMaintainer.getId());
-
-            throw new UserAccountServiceException(
-                UserAccountServiceException.Codes.DATABASE_ERROR_READ,
-                "Cannot register Maintainer with id "
+            throw generateException(
+                EXCEPTION_PRIMER_MAINTAINER_REGISTER
                     + transientMaintainer.getId()
-                    + ". Error reading from database.",
-                e);
+                    + ". Error reading Instance from database",
+                UserAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
 
         if (instanceEntity == null)
         {
-            log.info(
-                "Cannot register Maintainer with id {}. Incorrect instance object.",
-                transientMaintainer.getId());
-
-            throw new UserAccountServiceException(
-                UserAccountServiceException.Codes.INVALID_INSTANCE_OBJECT,
-                "Cannot register Maintainer with id "
-                    + transientMaintainer.getId()
-                    + ". Incorrect instance object.");
+            throw generateException(
+                EXCEPTION_PRIMER_MAINTAINER_REGISTER
+                    + transientMaintainer.getId() + ". Invalid Instance object",
+                UserAccountServiceException.Codes.INVALID_INSTANCE_OBJECT);
         }
 
-        // Incorrect username.
+        // Invalid username.
         if (!StringUtils.hasText(username))
         {
-            log.info(
-                "Cannot register Maintainer with id {}. Incorrect username.",
-                transientMaintainer.getId());
-
-            throw new UserAccountServiceException(
-                UserAccountServiceException.Codes.INVALID_USERNAME,
-                "Cannot create Owner with username '"
-                    + transientMaintainer.getId() + "'. Incorrect username.");
+            throw generateException(
+                EXCEPTION_PRIMER_MAINTAINER_REGISTER
+                    + transientMaintainer.getId() + ". Invalid username",
+                UserAccountServiceException.Codes.INVALID_USERNAME);
         }
 
-        // Incorrect password.
+        // Invalid password.
         if (!StringUtils.hasText(password))
         {
-            log.info(
-                "Cannot register Maintainer with id {}. Incorrect password.",
-                transientMaintainer.getId());
-
-            throw new UserAccountServiceException(
-                UserAccountServiceException.Codes.INVALID_PASSWORD,
-                "Cannot register Maintainer with id '"
-                    + transientMaintainer.getId() + "'. Incorrect password.");
+            throw generateException(
+                EXCEPTION_PRIMER_MAINTAINER_REGISTER
+                    + transientMaintainer.getId() + ". Invalid password",
+                UserAccountServiceException.Codes.INVALID_PASSWORD);
         }
 
         // Check to see if an account with the same username and password
         // exists.
         if (accountExistsInInstance(username, email, instanceEntity))
         {
-            log.info(
-                "Account with the same username or non-null email already exists! Username = {}, email = {}",
-                username, email);
-            throw new UserAccountServiceException(
-                UserAccountServiceException.Codes.ACCOUNT_ALREADY_EXISTS,
-                "Account with the same username or non-null email already exists! Username = '"
-                    + username + "', email = '" + email + "'");
+            throw generateException(
+                "Account with the same username or non-null email already exists! Username = "
+                    + username + ", email = " + email,
+                UserAccountServiceException.Codes.ACCOUNT_ALREADY_EXISTS);
         }
 
         // Read user account from database.
@@ -589,43 +481,28 @@ public class UserAccountService
         {
             accountEntity = getUserAccount(transientMaintainer);
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            log.info(
-                "Cannot register Maintainer with id {}. Error reading from database.",
-                transientMaintainer.getId());
-
-            throw new UserAccountServiceException(
-                UserAccountServiceException.Codes.DATABASE_ERROR_READ,
-                "Cannot register Maintainer with id "
-                    + transientMaintainer.getId()
-                    + ". Error reading from database.",
-                e);
+            throw generateException(EXCEPTION_PRIMER_MAINTAINER_REGISTER
+                + transientMaintainer.getId() + ". Error reading from database",
+                UserAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
 
         // Check if we're editing the correct account.
         if (accountEntity == null)
         {
-            log.info(
-                "Cannot register Maintainer with id {}. User account not found in database.",
-                transientMaintainer.getId());
-
-            throw new UserAccountServiceException(
-                UserAccountServiceException.Codes.ACCOUNT_NOT_FOUND,
-                "Cannot register Maintainer with id "
-                    + transientMaintainer.getId()
-                    + ". User account not found in database.");
+            throw generateException(
+                EXCEPTION_PRIMER_MAINTAINER_REGISTER
+                    + transientMaintainer.getId() + ". User account not found",
+                UserAccountServiceException.Codes.ACCOUNT_NOT_FOUND);
         }
 
         if (accountEntity.getRole() != UserAccountRoles.USER_ROLE_TRANSIENT)
         {
-            log.info("Cannot register Maintainer with id {}. Invalid role.",
-                transientMaintainer.getId());
-
-            throw new UserAccountServiceException(
-                UserAccountServiceException.Codes.ACCOUNT_ALREADY_REGISTERED,
-                "Cannot register Maintainer with id "
-                    + transientMaintainer.getId() + ". Invalid role.");
+            throw generateException(
+                EXCEPTION_PRIMER_MAINTAINER_REGISTER
+                    + transientMaintainer.getId() + ". Invalid role",
+                UserAccountServiceException.Codes.INVALID_ROLE);
         }
 
         // Attempt to modify and save user account.
@@ -641,22 +518,15 @@ public class UserAccountService
         {
             accountEntity = userAccountRepository.save(accountEntity);
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            log.info(
-                "Cannot register Maintainer with id {}. Error writing to database.",
-                transientMaintainer.getId());
-
-            throw new UserAccountServiceException(
-                UserAccountServiceException.Codes.DATABASE_ERROR_WRITE,
-                "Cannot register Maintainer with id "
-                    + transientMaintainer.getId()
-                    + ". Error writing to database.",
-                e);
+            throw generateException(EXCEPTION_PRIMER_MAINTAINER_REGISTER
+                + transientMaintainer.getId() + ". Error writing to database",
+                UserAccountServiceException.Codes.DATABASE_ERROR_WRITE, ex);
         }
 
         log.info(
-            "Registered transient Maintainer account {} with username '{}'",
+            "Registered transient Maintainer account id: {} with username: {}",
             accountEntity.getId(), accountEntity.getUsername());
 
         try
@@ -665,24 +535,19 @@ public class UserAccountService
 
             return getMaintainerDto(accountEntity);
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            log.info(
-                "Cannot return model for user account id {}. Error reading from database.",
-                accountEntity.getId());
-
-            throw new UserAccountServiceException(
-                UserAccountServiceException.Codes.DATABASE_ERROR_READ,
-                "Cannot return model for user account id "
-                    + accountEntity.getId() + ". Error reading from database.",
-                e);
+            throw generateException(
+                EXCEPTION_PRIMER_MAINTAINER_MODEL + transientMaintainer.getId()
+                    + ". Error reading from database",
+                UserAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
     }
 
     private Boolean accountExistsInGlobal(String username, String email)
     {
         log.debug(
-            "Searching for existance of Global user account with username '{}' and/or email '{}",
+            "Searching for existance of Global user account with username: {} and/or email: {}",
             username, email);
 
         UserAccount probe = new UserAccount();
@@ -712,7 +577,7 @@ public class UserAccountService
         Instance parentInstance)
     {
         log.debug(
-            "Searching for existance of Maintainer user account with username '{}' and/or email '{} in instance id {}",
+            "Searching for existance of Maintainer user account with username: {} and/or email: {} in instance id: {}",
             username, email, parentInstance.getId());
 
         UserAccount probe = new UserAccount();
@@ -728,6 +593,22 @@ public class UserAccountService
             .withIgnorePaths("role", "parentInstance", "deleted");
 
         return userAccountRepository.exists(Example.of(probe, matcher));
+    }
+
+    private UserAccountServiceException generateException(String message,
+        UserAccountServiceException.Codes code)
+    {
+        log.error(message);
+
+        return new UserAccountServiceException(code, message);
+    }
+
+    private UserAccountServiceException generateException(String message,
+        UserAccountServiceException.Codes code, Exception ex)
+    {
+        log.error(message, ex);
+
+        return new UserAccountServiceException(code, message, ex);
     }
 
     public AdminDto getAdminDto(UserAccount ua) throws Exception

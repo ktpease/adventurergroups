@@ -36,6 +36,7 @@ public class CharacterServiceException extends Exception
         CHARACTER_NOT_FOUND,
         INSTANCE_NOT_FOUND,
         INVALID_INSTANCE_OBJECT,
+        INSTANCE_INACTIVE,
         CREATOR_NOT_FOUND,
         INVALID_CREATOR_OBJECT,
         INVALID_CREATOR_ROLE,

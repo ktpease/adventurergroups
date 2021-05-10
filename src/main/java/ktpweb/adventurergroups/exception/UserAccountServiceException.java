@@ -35,7 +35,6 @@ public class UserAccountServiceException extends Exception
         NULL_ACCOUNT_OBJECT,
         ACCOUNT_NOT_FOUND,
         ACCOUNT_ALREADY_EXISTS,
-        ACCOUNT_ALREADY_REGISTERED,
         INVALID_USERNAME,
         INVALID_PASSWORD,
         INVALID_ROLE,

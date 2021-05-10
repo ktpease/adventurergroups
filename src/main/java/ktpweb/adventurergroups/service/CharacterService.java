@@ -43,6 +43,13 @@ public class CharacterService
     private final String DEFAULT_CHARACTER_NAME = "New Character";
     private final String DEFAULT_GROUP_NAME = "New Group";
 
+    private final String EXCEPTION_PRIMER_CHARACTER_CREATE = "Cannot create Character for Instance id: ";
+
+    private final String EXCEPTION_PRIMER_GROUP_CREATE = "Cannot create Character Group for Instance id: ";
+
+    private final String EXCEPTION_PRIMER_CHARACTER_MODEL = "Cannot return model for Character with id: ";
+    private final String EXCEPTION_PRIMER_GROUP_MODEL = "Cannot return model for Character Group with id: ";
+
     public Character getCharacter(Long id) throws Exception
     {
         try
@@ -74,14 +81,14 @@ public class CharacterService
                 ? characterGroup
                 : null;
         }
-        catch (IllegalArgumentException e)
+        catch (IllegalArgumentException iae)
         {
             return null;
         }
     }
 
-    protected CharacterGroup getCharacterGroup(CharacterGroupDto characterGroupDto)
-        throws Exception
+    protected CharacterGroup getCharacterGroup(
+        CharacterGroupDto characterGroupDto) throws Exception
     {
         return getCharacterGroup(characterGroupDto.getId());
     }
@@ -93,25 +100,20 @@ public class CharacterService
     {
         if (instance == null)
         {
-            log.info("Attempted creation of a Character with a null Instance.");
-
-            throw new CharacterServiceException(
-                CharacterServiceException.Codes.INVALID_INSTANCE_OBJECT,
-                "Attempted creation of a Character with a null Instance.");
+            throw generateException(
+                "Attempted creation of a Character with a null Instance",
+                CharacterServiceException.Codes.INVALID_INSTANCE_OBJECT);
         }
 
         if (creator == null)
         {
-            log.info(
-                "Attempted creation of a Character with a null creator User Account.");
-
-            throw new CharacterServiceException(
-                CharacterServiceException.Codes.INVALID_INSTANCE_OBJECT,
-                "Attempted creation of a Character with a null creator User Account.");
+            throw generateException(
+                "Attempted creation of a Character with a null creator User Account",
+                CharacterServiceException.Codes.INVALID_CREATOR_OBJECT);
         }
 
         log.info(
-            "Attempting to create Character for Instance id {} by User Account id {}",
+            "Attempting to create Character for Instance id: {} by User Account id: {}",
             instance.getId(), creator.getId());
 
         // Load and validate Instance.
@@ -121,41 +123,28 @@ public class CharacterService
         {
             instanceEntity = instanceService.getInstance(instance);
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            log.info(
-                "Cannot create Character for Instance id {}. Error reading from database.",
-                instance.getId());
-
-            throw new CharacterServiceException(
-                CharacterServiceException.Codes.DATABASE_ERROR_READ,
-                "Cannot create Character for Instance id " + instance.getId()
-                    + ". Error reading from database.",
-                e);
+            throw generateException(
+                EXCEPTION_PRIMER_CHARACTER_CREATE + instance.getId()
+                    + ". Error reading Instance from database",
+                CharacterServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
 
         if (instanceEntity == null)
         {
-            log.info(
-                "Cannot create Character for Instance id {}. Instance not found.",
-                instance.getId());
-
-            throw new CharacterServiceException(
-                CharacterServiceException.Codes.INSTANCE_NOT_FOUND,
-                "Cannot create Character for Instance id " + instance.getId()
-                    + ". Instance not found.");
+            throw generateException(
+                EXCEPTION_PRIMER_CHARACTER_CREATE + instance.getId()
+                    + ". Instance not found",
+                CharacterServiceException.Codes.INSTANCE_NOT_FOUND);
         }
 
-        if (instanceEntity.getActive())
+        if (!instanceEntity.getActive())
         {
-            log.info(
-                "Cannot create Character for Instance id {}. Instance is inactive.",
-                instance.getId());
-
-            throw new CharacterServiceException(
-                CharacterServiceException.Codes.INSTANCE_NOT_FOUND,
-                "Cannot create Character for Instance id " + instance.getId()
-                    + ". Instance is inactive.");
+            throw generateException(
+                EXCEPTION_PRIMER_CHARACTER_CREATE + instance.getId()
+                    + ". Instance is inactive",
+                CharacterServiceException.Codes.INSTANCE_INACTIVE);
         }
 
         // Load and validate creator User Account.
@@ -165,41 +154,31 @@ public class CharacterService
         {
             creatorEntity = userAccountService.getUserAccount(creator);
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            log.info(
-                "Cannot create Character from creator User Account id {}. Error reading from database.",
-                creator.getId());
-
-            throw new CharacterServiceException(
-                CharacterServiceException.Codes.DATABASE_ERROR_READ,
-                "Cannot create Character for Instance id " + creator.getId()
-                    + ". Error reading from database.",
-                e);
+            throw generateException(
+                EXCEPTION_PRIMER_CHARACTER_CREATE + instance.getId()
+                    + ". Error reading creator User Account with id: "
+                    + creator.getId() + " from database",
+                CharacterServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
 
         if (creatorEntity == null)
         {
-            log.info(
-                "Cannot create Character from creator User Account id {}. User Account not found.",
-                creator.getId());
-
-            throw new CharacterServiceException(
-                CharacterServiceException.Codes.CREATOR_NOT_FOUND,
-                "Cannot create Character for creator User Account id "
-                    + creator.getId() + ". User Account not found.");
+            throw generateException(
+                EXCEPTION_PRIMER_CHARACTER_CREATE + instance.getId()
+                    + ". Creator User Account with id: " + creator.getId()
+                    + " not found",
+                CharacterServiceException.Codes.CREATOR_NOT_FOUND);
         }
 
         if (creatorEntity.getRole() == UserAccountRoles.USER_ROLE_TRANSIENT)
         {
-            log.info(
-                "Cannot create Character from creator User Account id {}. User account is transient!",
-                creator.getId());
-
-            throw new CharacterServiceException(
-                CharacterServiceException.Codes.INVALID_CREATOR_ROLE,
-                "Cannot create Character from creator User Account id "
-                    + creator.getId() + ". User account is transient!");
+            throw generateException(
+                EXCEPTION_PRIMER_CHARACTER_CREATE + instance.getId()
+                    + ". Creator User Account with id: " + creator.getId()
+                    + " is transient",
+                CharacterServiceException.Codes.INVALID_CREATOR_ROLE);
         }
 
         if ((creatorEntity.getRole() == UserAccountRoles.USER_ROLE_OWNER
@@ -207,15 +186,11 @@ public class CharacterService
             || (creatorEntity.getRole() == UserAccountRoles.USER_ROLE_MAINTAINER
                 && creatorEntity.getParentInstance() != instanceEntity))
         {
-            log.info(
-                "Cannot create Character from creator User Account id {}. User account should not see Instance!",
-                creator.getId());
-
-            throw new CharacterServiceException(
-                CharacterServiceException.Codes.INVALID_CREATOR_OBJECT,
-                "Cannot create Character from creator User Account id "
-                    + creator.getId()
-                    + ". User account should not see Instance!");
+            throw generateException(
+                EXCEPTION_PRIMER_CHARACTER_CREATE + instance.getId()
+                    + ". Creator User Account with id: " + creator.getId()
+                    + " should not see Instance",
+                CharacterServiceException.Codes.INVALID_CREATOR_OBJECT);
         }
 
         // Load and validate Character Group.
@@ -238,37 +213,26 @@ public class CharacterService
         {
             characterEntity = characterRepository.save(characterEntity);
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            log.info(
-                "Cannot create Character for Instance id {}. Error writing to database.",
-                instance.getId());
-
-            throw new CharacterServiceException(
-                CharacterServiceException.Codes.DATABASE_ERROR_WRITE,
-                "Cannot create Character for Instance id " + instance.getId()
-                    + ". Error writing to database.",
-                e);
+            throw generateException(
+                EXCEPTION_PRIMER_CHARACTER_CREATE + instance.getId()
+                    + ". Error writing to database",
+                CharacterServiceException.Codes.DATABASE_ERROR_WRITE, ex);
         }
 
-        log.info("Created Character with id {}", characterEntity.getId());
+        log.info("Created Character with id: {}", characterEntity.getId());
 
         try
         {
             return getCharacterDto(characterEntity);
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            log.info(
-                "Cannot return model for Character id {}. Error reading from database.",
-                characterEntity.getId());
-
-            throw new CharacterServiceException(
-                CharacterServiceException.Codes.DATABASE_ERROR_READ,
-                "Cannot return model for Character id "
-                    + characterEntity.getId()
-                    + ". Error reading from database.",
-                e);
+            throw generateException(
+                EXCEPTION_PRIMER_CHARACTER_MODEL + characterEntity.getId()
+                    + ". Error reading from database",
+                CharacterServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
     }
 
@@ -278,14 +242,12 @@ public class CharacterService
     {
         if (instance == null)
         {
-            log.info("Attempted creation of a Character with a null Instance.");
-
-            throw new CharacterServiceException(
-                CharacterServiceException.Codes.INVALID_INSTANCE_OBJECT,
-                "Attempted creation of a Character with a null Instance.");
+            throw generateException(
+                "Attempted creation of a Character with a null Instance",
+                CharacterServiceException.Codes.INVALID_INSTANCE_OBJECT);
         }
 
-        log.info("Attempting to create Character Group for Instance id {}",
+        log.info("Attempting to create Character Group for Instance id: {}",
             instance.getId());
 
         // Load and validate Instance.
@@ -295,41 +257,28 @@ public class CharacterService
         {
             instanceEntity = instanceService.getInstance(instance);
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            log.info(
-                "Cannot create Character Group for Instance id {}. Error reading from database.",
-                instance.getId());
-
-            throw new CharacterServiceException(
-                CharacterServiceException.Codes.DATABASE_ERROR_READ,
-                "Cannot create Character Group for Instance id "
-                    + instance.getId() + ". Error reading from database.",
-                e);
+            throw generateException(
+                EXCEPTION_PRIMER_GROUP_CREATE + instance.getId()
+                    + ". Error reading from database",
+                CharacterServiceException.Codes.INVALID_INSTANCE_OBJECT, ex);
         }
 
         if (instanceEntity == null)
         {
-            log.info(
-                "Cannot create Character Group for Instance id {}. Instance not found.",
-                instance.getId());
-
-            throw new CharacterServiceException(
-                CharacterServiceException.Codes.INSTANCE_NOT_FOUND,
-                "Cannot create Character Group for Instance id "
-                    + instance.getId() + ". Instance not found.");
+            throw generateException(
+                EXCEPTION_PRIMER_GROUP_CREATE + instance.getId()
+                    + ". Instance not found",
+                CharacterServiceException.Codes.INSTANCE_NOT_FOUND);
         }
 
         if (instanceEntity.getActive())
         {
-            log.info(
-                "Cannot create Character Group for Instance id {}. Instance is inactive.",
-                instance.getId());
-
-            throw new CharacterServiceException(
-                CharacterServiceException.Codes.INSTANCE_NOT_FOUND,
-                "Cannot create Character Group for Instance id "
-                    + instance.getId() + ". Instance is inactive.");
+            throw generateException(
+                EXCEPTION_PRIMER_GROUP_CREATE + instance.getId()
+                    + ". Instance is inactive",
+                CharacterServiceException.Codes.INSTANCE_INACTIVE);
         }
 
         // Generate database entity.
@@ -346,39 +295,44 @@ public class CharacterService
             characterGroupEntity = characterGroupRepository
                 .save(characterGroupEntity);
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            log.info(
-                "Cannot create Character Group for Instance id {}. Error writing to database.",
-                instance.getId());
-
-            throw new CharacterServiceException(
-                CharacterServiceException.Codes.DATABASE_ERROR_WRITE,
-                "Cannot create Character Group for Instance id "
-                    + instance.getId() + ". Error writing to database.",
-                e);
+            throw generateException(
+                EXCEPTION_PRIMER_GROUP_CREATE + instance.getId()
+                    + ". Error writing to database",
+                CharacterServiceException.Codes.DATABASE_ERROR_WRITE, ex);
         }
 
-        log.info("Created Character Group with id {}",
+        log.info("Created Character Group with id: {}",
             characterGroupEntity.getId());
 
         try
         {
             return getCharacterGroupDto(characterGroupEntity);
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            log.info(
-                "Cannot return model for Character Group id {}. Error reading from database.",
-                characterGroupEntity.getId());
-
-            throw new CharacterServiceException(
-                CharacterServiceException.Codes.DATABASE_ERROR_READ,
-                "Cannot return model for Character Group id "
-                    + characterGroupEntity.getId()
-                    + ". Error reading from database.",
-                e);
+            throw generateException(
+                EXCEPTION_PRIMER_GROUP_MODEL + characterGroupEntity.getId()
+                    + ". Error reading from database",
+                CharacterServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
+    }
+
+    private CharacterServiceException generateException(String message,
+        CharacterServiceException.Codes code)
+    {
+        log.error(message);
+
+        return new CharacterServiceException(code, message);
+    }
+
+    private CharacterServiceException generateException(String message,
+        CharacterServiceException.Codes code, Exception ex)
+    {
+        log.error(message, ex);
+
+        return new CharacterServiceException(code, message, ex);
     }
 
     public CharacterDto getCharacterDto(Character character) throws Exception

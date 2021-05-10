@@ -267,7 +267,7 @@ class UserAccountServiceTests
 				null, null),
 			"Should not register Maintainer that is already registered");
 		assertEquals(exception.getCode(),
-			UserAccountServiceException.Codes.ACCOUNT_ALREADY_REGISTERED);
+			UserAccountServiceException.Codes.INVALID_ROLE);
 
 		// Create second transient maintainer for fail conditions.
 		MaintainerDto testTransientMaintainer2 = userAccountService
