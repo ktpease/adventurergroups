@@ -35,26 +35,6 @@ public class InstanceService
 
     private final String DEFAULT_NAME = "New Instance";
 
-    protected Instance getInstance(Long id) throws Exception
-    {
-        try
-        {
-            Instance instance = instanceRepository.findById(id).orElse(null);
-
-            return (instance != null && !instance.getDeleted()) ? instance
-                : null;
-        }
-        catch (IllegalArgumentException iae)
-        {
-            return null;
-        }
-    }
-
-    protected Instance getInstance(InstanceDto instanceDto) throws Exception
-    {
-        return getInstance(instanceDto.getId());
-    }
-
     private final String EXCEPTION_PRIMER_CREATE = "Cannot create Instance for owner User Account id: ";
     private final String EXCEPTION_PRIMER_ACTIVATE = "Cannot activate Instance with id: ";
     private final String EXCEPTION_PRIMER_DEACTIVATE = "Cannot deactivate Instance with id: ";
@@ -79,7 +59,7 @@ public class InstanceService
 
         try
         {
-            ownerEntity = userAccountService.getUserAccount(owner);
+            ownerEntity = userAccountService.getUserAccountEntity(owner);
         }
         catch (Exception ex)
         {
@@ -181,7 +161,7 @@ public class InstanceService
 
         try
         {
-            instanceEntity = getInstance(instance);
+            instanceEntity = getInstanceEntity(instance);
         }
         catch (Exception ex)
         {
@@ -251,7 +231,7 @@ public class InstanceService
 
         try
         {
-            instanceEntity = getInstance(instance);
+            instanceEntity = getInstanceEntity(instance);
         }
         catch (Exception ex)
         {
@@ -304,6 +284,57 @@ public class InstanceService
         }
     }
 
+    protected Instance getInstanceEntity(Long id) throws Exception
+    {
+        try
+        {
+            Instance instance = instanceRepository.findById(id).orElse(null);
+
+            return (instance != null && !instance.getDeleted()) ? instance
+                : null;
+        }
+        catch (IllegalArgumentException iae)
+        {
+            return null;
+        }
+    }
+
+    protected Instance getInstanceEntity(InstanceDto instanceDto)
+        throws Exception
+    {
+        return getInstanceEntity(instanceDto.getId());
+    }
+
+    protected InstanceDto getInstanceDto(Instance instance) throws Exception
+    {
+        InstanceDto dto = new InstanceDto();
+
+        dto.setId(instance.getId());
+        dto.setSubdomainName(instance.getSubdomainName());
+        dto.setDisplayName(instance.getDisplayName());
+        dto.setDescription(instance.getDescription());
+        dto.setOwnerId(instance.getOwner().getId());
+        dto.setActive(instance.getActive());
+        dto.setCreateDate(instance.getCreateDate());
+        dto.setLastActivateDate(instance.getLastActivateDate());
+        dto.setLastDeactivateDate(instance.getLastDeactivateDate());
+
+        dto.setMaintainerIds(Optional.ofNullable(instance.getMaintainers())
+            .map(Set::stream).orElseGet(Stream::empty).map(ua -> ua.getId())
+            .collect(Collectors.toSet()));
+
+        dto.setCharacterIds(Optional.ofNullable(instance.getCharacters())
+            .map(Set::stream).orElseGet(Stream::empty).map(c -> c.getId())
+            .collect(Collectors.toSet()));
+
+        dto.setCharacterGroupIds(
+            Optional.ofNullable(instance.getCharacterGroups()).map(Set::stream)
+                .orElseGet(Stream::empty).map(cg -> cg.getId())
+                .collect(Collectors.toSet()));
+
+        return dto;
+    }
+
     private Boolean instanceExists(String subdomainName)
     {
         log.debug("Searching for existance of Instance with subdomain name: {}",
@@ -333,35 +364,5 @@ public class InstanceService
         log.error(message, ex);
 
         return new InstanceServiceException(code, message, ex);
-    }
-
-    public InstanceDto getInstanceDto(Instance instance) throws Exception
-    {
-        InstanceDto dto = new InstanceDto();
-
-        dto.setId(instance.getId());
-        dto.setSubdomainName(instance.getSubdomainName());
-        dto.setDisplayName(instance.getDisplayName());
-        dto.setDescription(instance.getDescription());
-        dto.setOwnerId(instance.getOwner().getId());
-        dto.setActive(instance.getActive());
-        dto.setCreateDate(instance.getCreateDate());
-        dto.setLastActivateDate(instance.getLastActivateDate());
-        dto.setLastDeactivateDate(instance.getLastDeactivateDate());
-
-        dto.setMaintainerIds(Optional.ofNullable(instance.getMaintainers())
-            .map(Set::stream).orElseGet(Stream::empty).map(ua -> ua.getId())
-            .collect(Collectors.toSet()));
-
-        dto.setCharacterIds(Optional.ofNullable(instance.getCharacters())
-            .map(Set::stream).orElseGet(Stream::empty).map(c -> c.getId())
-            .collect(Collectors.toSet()));
-
-        dto.setCharacterGroupIds(
-            Optional.ofNullable(instance.getCharacterGroups()).map(Set::stream)
-                .orElseGet(Stream::empty).map(cg -> cg.getId())
-                .collect(Collectors.toSet()));
-
-        return dto;
     }
 }

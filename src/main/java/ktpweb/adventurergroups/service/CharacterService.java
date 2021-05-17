@@ -50,49 +50,6 @@ public class CharacterService
     private final String EXCEPTION_PRIMER_CHARACTER_MODEL = "Cannot return model for Character with id: ";
     private final String EXCEPTION_PRIMER_GROUP_MODEL = "Cannot return model for Character Group with id: ";
 
-    public Character getCharacter(Long id) throws Exception
-    {
-        try
-        {
-            Character character = characterRepository.findById(id).orElse(null);
-
-            return (character != null && !character.getDeleted()) ? character
-                : null;
-        }
-        catch (IllegalArgumentException iae)
-        {
-            return null;
-        }
-    }
-
-    public Character getCharacter(CharacterDto characterDto) throws Exception
-    {
-        return getCharacter(characterDto.getId());
-    }
-
-    protected CharacterGroup getCharacterGroup(Long id) throws Exception
-    {
-        try
-        {
-            CharacterGroup characterGroup = characterGroupRepository
-                .findById(id).orElse(null);
-
-            return (characterGroup != null && !characterGroup.getDeleted())
-                ? characterGroup
-                : null;
-        }
-        catch (IllegalArgumentException iae)
-        {
-            return null;
-        }
-    }
-
-    protected CharacterGroup getCharacterGroup(
-        CharacterGroupDto characterGroupDto) throws Exception
-    {
-        return getCharacterGroup(characterGroupDto.getId());
-    }
-
     @Transactional
     public CharacterDto createCharacter(InstanceDto instance,
         CharacterGroupDto characterGroup, UserAccountDto creator)
@@ -121,7 +78,7 @@ public class CharacterService
 
         try
         {
-            instanceEntity = instanceService.getInstance(instance);
+            instanceEntity = instanceService.getInstanceEntity(instance);
         }
         catch (Exception ex)
         {
@@ -152,7 +109,7 @@ public class CharacterService
 
         try
         {
-            creatorEntity = userAccountService.getUserAccount(creator);
+            creatorEntity = userAccountService.getUserAccountEntity(creator);
         }
         catch (Exception ex)
         {
@@ -255,7 +212,7 @@ public class CharacterService
 
         try
         {
-            instanceEntity = instanceService.getInstance(instance);
+            instanceEntity = instanceService.getInstanceEntity(instance);
         }
         catch (Exception ex)
         {
@@ -319,23 +276,51 @@ public class CharacterService
         }
     }
 
-    private CharacterServiceException generateException(String message,
-        CharacterServiceException.Codes code)
+    protected Character getCharacterEntity(Long id) throws Exception
     {
-        log.error(message);
+        try
+        {
+            Character character = characterRepository.findById(id).orElse(null);
 
-        return new CharacterServiceException(code, message);
+            return (character != null && !character.getDeleted()) ? character
+                : null;
+        }
+        catch (IllegalArgumentException iae)
+        {
+            return null;
+        }
     }
 
-    private CharacterServiceException generateException(String message,
-        CharacterServiceException.Codes code, Exception ex)
+    protected Character getCharacterEntity(CharacterDto characterDto)
+        throws Exception
     {
-        log.error(message, ex);
-
-        return new CharacterServiceException(code, message, ex);
+        return getCharacterEntity(characterDto.getId());
     }
 
-    public CharacterDto getCharacterDto(Character character) throws Exception
+    protected CharacterGroup getCharacterGroupEntity(Long id) throws Exception
+    {
+        try
+        {
+            CharacterGroup characterGroup = characterGroupRepository
+                .findById(id).orElse(null);
+
+            return (characterGroup != null && !characterGroup.getDeleted())
+                ? characterGroup
+                : null;
+        }
+        catch (IllegalArgumentException iae)
+        {
+            return null;
+        }
+    }
+
+    protected CharacterGroup getCharacterGroupEntity(
+        CharacterGroupDto characterGroupDto) throws Exception
+    {
+        return getCharacterGroupEntity(characterGroupDto.getId());
+    }
+
+    protected CharacterDto getCharacterDto(Character character) throws Exception
     {
         CharacterDto dto = new CharacterDto();
 
@@ -350,7 +335,7 @@ public class CharacterService
         return dto;
     }
 
-    public CharacterGroupDto getCharacterGroupDto(CharacterGroup cg)
+    protected CharacterGroupDto getCharacterGroupDto(CharacterGroup cg)
         throws Exception
     {
         CharacterGroupDto dto = new CharacterGroupDto();
@@ -366,5 +351,21 @@ public class CharacterService
         dto.setCreateDate(cg.getCreateDate());
 
         return dto;
+    }
+
+    private CharacterServiceException generateException(String message,
+        CharacterServiceException.Codes code)
+    {
+        log.error(message);
+
+        return new CharacterServiceException(code, message);
+    }
+
+    private CharacterServiceException generateException(String message,
+        CharacterServiceException.Codes code, Exception ex)
+    {
+        log.error(message, ex);
+
+        return new CharacterServiceException(code, message, ex);
     }
 }

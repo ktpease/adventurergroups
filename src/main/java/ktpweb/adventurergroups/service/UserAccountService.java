@@ -53,30 +53,6 @@ public class UserAccountService
     private final String EXCEPTION_PRIMER_ADMIN_MODEL = "Cannot return model for Admin account with id: ";
     private final String EXCEPTION_PRIMER_OWNER_MODEL = "Cannot return model for Owner account with id: ";
     private final String EXCEPTION_PRIMER_MAINTAINER_MODEL = "Cannot return model for Maintainer account with id: ";
-    private final String EXCEPTION_PRIMER_TRANSIENT_MODEL = "Cannot return model for transient Maintainer account with id: ";
-
-    protected UserAccount getUserAccount(Long id) throws Exception
-    {
-        try
-        {
-            UserAccount userAccount = userAccountRepository.findById(id)
-                .orElse(null);
-
-            return (userAccount != null && !userAccount.getDeleted())
-                ? userAccount
-                : null;
-        }
-        catch (IllegalArgumentException iae)
-        {
-            return null;
-        }
-    }
-
-    protected UserAccount getUserAccount(UserAccountDto userAccountDto)
-        throws Exception
-    {
-        return getUserAccount(userAccountDto.getId());
-    }
 
     @Transactional
     public AdminDto createAdmin(String username, String password, String email,
@@ -245,7 +221,7 @@ public class UserAccountService
 
         try
         {
-            instanceEntity = instanceService.getInstance(parentInstance);
+            instanceEntity = instanceService.getInstanceEntity(parentInstance);
         }
         catch (Exception ex)
         {
@@ -297,7 +273,7 @@ public class UserAccountService
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_PRIMER_TRANSIENT_MODEL + accountEntity.getId()
+                EXCEPTION_PRIMER_MAINTAINER_MODEL + accountEntity.getId()
                     + ". Error reading from database",
                 UserAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
@@ -322,7 +298,7 @@ public class UserAccountService
 
         try
         {
-            characterEntity = characterService.getCharacter(character);
+            characterEntity = characterService.getCharacterEntity(character);
         }
         catch (Exception ex)
         {
@@ -346,7 +322,7 @@ public class UserAccountService
         try
         {
             instanceEntity = instanceService
-                .getInstance(character.getInstanceId());
+                .getInstanceEntity(character.getInstanceId());
         }
         catch (Exception ex)
         {
@@ -400,7 +376,7 @@ public class UserAccountService
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_PRIMER_TRANSIENT_MODEL + character.getId()
+                EXCEPTION_PRIMER_MAINTAINER_MODEL + character.getId()
                     + ". Error reading from database",
                 UserAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
@@ -427,7 +403,7 @@ public class UserAccountService
         try
         {
             instanceEntity = instanceService
-                .getInstance(transientMaintainer.getParentInstanceId());
+                .getInstanceEntity(transientMaintainer.getParentInstanceId());
         }
         catch (Exception ex)
         {
@@ -479,7 +455,7 @@ public class UserAccountService
 
         try
         {
-            accountEntity = getUserAccount(transientMaintainer);
+            accountEntity = getUserAccountEntity(transientMaintainer);
         }
         catch (Exception ex)
         {
@@ -542,6 +518,86 @@ public class UserAccountService
                     + ". Error reading from database",
                 UserAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
+    }
+
+    protected UserAccount getUserAccountEntity(Long id) throws Exception
+    {
+        try
+        {
+            UserAccount userAccount = userAccountRepository.findById(id)
+                .orElse(null);
+
+            return (userAccount != null && !userAccount.getDeleted())
+                ? userAccount
+                : null;
+        }
+        catch (IllegalArgumentException iae)
+        {
+            return null;
+        }
+    }
+
+    protected UserAccount getUserAccountEntity(UserAccountDto userAccountDto)
+        throws Exception
+    {
+        return getUserAccountEntity(userAccountDto.getId());
+    }
+
+    protected AdminDto getAdminDto(UserAccount ua) throws Exception
+    {
+        AdminDto dto = new AdminDto();
+
+        dto.setId(ua.getId());
+        dto.setUsername(ua.getUsername());
+        dto.setEmail(ua.getEmail());
+        dto.setDisplayname(ua.getDisplayname());
+        dto.setCreateDate(ua.getCreateDate());
+
+        return dto;
+    }
+
+    protected OwnerDto getOwnerDto(UserAccount ua) throws Exception
+    {
+        OwnerDto dto = new OwnerDto();
+
+        dto.setId(ua.getId());
+        dto.setUsername(ua.getUsername());
+        dto.setEmail(ua.getEmail());
+        dto.setDisplayname(ua.getDisplayname());
+        dto.setInstanceIds(Optional.ofNullable(ua.getInstances())
+            .map(Set::stream).orElseGet(Stream::empty).map(i -> i.getId())
+            .collect(Collectors.toSet()));
+
+        dto.setCreateDate(ua.getCreateDate());
+
+        return dto;
+    }
+
+    protected MaintainerDto getMaintainerDto(UserAccount ua) throws Exception
+    {
+        MaintainerDto dto = new MaintainerDto();
+
+        dto.setId(ua.getId());
+        dto.setParentInstanceId(ua.getParentInstance().getId());
+        dto.setCharacterIds(Optional.ofNullable(ua.getCharacters())
+            .map(Set::stream).orElseGet(Stream::empty).map(c -> c.getId())
+            .collect(Collectors.toSet()));
+        dto.setCreateDate(ua.getCreateDate());
+
+        if (ua.getRole() == UserAccountRoles.USER_ROLE_TRANSIENT)
+        {
+            dto.setIsTransient(true);
+            dto.setInviteToken(ua.getInviteToken());
+        }
+        else
+        {
+            dto.setIsTransient(false);
+            dto.setUsername(ua.getUsername());
+            dto.setEmail(ua.getEmail());
+            dto.setDisplayname(ua.getDisplayname());
+        }
+
+        return dto;
     }
 
     private Boolean accountExistsInGlobal(String username, String email)
@@ -609,62 +665,5 @@ public class UserAccountService
         log.error(message, ex);
 
         return new UserAccountServiceException(code, message, ex);
-    }
-
-    public AdminDto getAdminDto(UserAccount ua) throws Exception
-    {
-        AdminDto dto = new AdminDto();
-
-        dto.setId(ua.getId());
-        dto.setUsername(ua.getUsername());
-        dto.setEmail(ua.getEmail());
-        dto.setDisplayname(ua.getDisplayname());
-        dto.setCreateDate(ua.getCreateDate());
-
-        return dto;
-    }
-
-    public OwnerDto getOwnerDto(UserAccount ua) throws Exception
-    {
-        OwnerDto dto = new OwnerDto();
-
-        dto.setId(ua.getId());
-        dto.setUsername(ua.getUsername());
-        dto.setEmail(ua.getEmail());
-        dto.setDisplayname(ua.getDisplayname());
-        dto.setInstanceIds(Optional.ofNullable(ua.getInstances())
-            .map(Set::stream).orElseGet(Stream::empty).map(i -> i.getId())
-            .collect(Collectors.toSet()));
-
-        dto.setCreateDate(ua.getCreateDate());
-
-        return dto;
-    }
-
-    public MaintainerDto getMaintainerDto(UserAccount ua) throws Exception
-    {
-        MaintainerDto dto = new MaintainerDto();
-
-        dto.setId(ua.getId());
-        dto.setParentInstanceId(ua.getParentInstance().getId());
-        dto.setCharacterIds(Optional.ofNullable(ua.getCharacters())
-            .map(Set::stream).orElseGet(Stream::empty).map(c -> c.getId())
-            .collect(Collectors.toSet()));
-        dto.setCreateDate(ua.getCreateDate());
-
-        if (ua.getRole() == UserAccountRoles.USER_ROLE_TRANSIENT)
-        {
-            dto.setIsTransient(true);
-            dto.setInviteToken(ua.getInviteToken());
-        }
-        else
-        {
-            dto.setIsTransient(false);
-            dto.setUsername(ua.getUsername());
-            dto.setEmail(ua.getEmail());
-            dto.setDisplayname(ua.getDisplayname());
-        }
-
-        return dto;
     }
 }
