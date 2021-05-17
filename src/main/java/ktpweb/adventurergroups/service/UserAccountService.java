@@ -123,7 +123,8 @@ public class UserAccountService
             throw generateException(
                 EXCEPTION_PRIMER_ADMIN_MODEL + accountEntity.getId()
                     + ". Error reading from database",
-                UserAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
+                UserAccountServiceException.Codes.DATABASE_ERROR_READ_MAPPING,
+                ex);
         }
     }
 
@@ -198,7 +199,8 @@ public class UserAccountService
             throw generateException(
                 EXCEPTION_PRIMER_OWNER_MODEL + accountEntity.getId()
                     + ". Error reading from database",
-                UserAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
+                UserAccountServiceException.Codes.DATABASE_ERROR_READ_MAPPING,
+                ex);
         }
     }
 
@@ -264,6 +266,17 @@ public class UserAccountService
         log.info("Created transient Maintainer account with id: {}",
             accountEntity.getId());
 
+        // Update inverse side of Maintainer-Instance relationship because
+        // it doesn't automatically do that?!?!
+        Set<UserAccount> maintainerList = instanceEntity.getMaintainers();
+
+        if (maintainerList == null)
+            maintainerList = new HashSet<UserAccount>();
+
+        maintainerList.add(accountEntity);
+
+        instanceEntity.setMaintainers(maintainerList);
+
         try
         {
             Hibernate.initialize(accountEntity.getCharacters());
@@ -275,7 +288,8 @@ public class UserAccountService
             throw generateException(
                 EXCEPTION_PRIMER_MAINTAINER_MODEL + accountEntity.getId()
                     + ". Error reading from database",
-                UserAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
+                UserAccountServiceException.Codes.DATABASE_ERROR_READ_MAPPING,
+                ex);
         }
     }
 
@@ -367,6 +381,17 @@ public class UserAccountService
         log.info("Created transient Maintainer account with id: {}",
             accountEntity.getId());
 
+        // Update inverse side of Maintainer-Instance relationship because
+        // it doesn't automatically do that?!?!
+        Set<UserAccount> maintainerList = instanceEntity.getMaintainers();
+
+        if (maintainerList == null)
+            maintainerList = new HashSet<UserAccount>();
+
+        maintainerList.add(accountEntity);
+
+        instanceEntity.setMaintainers(maintainerList);
+
         try
         {
             Hibernate.initialize(accountEntity.getCharacters());
@@ -378,7 +403,8 @@ public class UserAccountService
             throw generateException(
                 EXCEPTION_PRIMER_MAINTAINER_MODEL + character.getId()
                     + ". Error reading from database",
-                UserAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
+                UserAccountServiceException.Codes.DATABASE_ERROR_READ_MAPPING,
+                ex);
         }
     }
 
@@ -516,7 +542,8 @@ public class UserAccountService
             throw generateException(
                 EXCEPTION_PRIMER_MAINTAINER_MODEL + transientMaintainer.getId()
                     + ". Error reading from database",
-                UserAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
+                UserAccountServiceException.Codes.DATABASE_ERROR_READ_MAPPING,
+                ex);
         }
     }
 

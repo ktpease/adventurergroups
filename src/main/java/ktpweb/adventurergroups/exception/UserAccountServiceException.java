@@ -32,6 +32,7 @@ public class UserAccountServiceException extends Exception
     {
         DATABASE_ERROR_READ,
         DATABASE_ERROR_WRITE,
+        DATABASE_ERROR_READ_MAPPING,
         NULL_ACCOUNT_OBJECT,
         ACCOUNT_NOT_FOUND,
         ACCOUNT_ALREADY_EXISTS,
@@ -41,6 +42,6 @@ public class UserAccountServiceException extends Exception
         CHARACTER_NOT_FOUND,
         INVALID_CHARACTER_OBJECT,
         INSTANCE_NOT_FOUND,
-        INVALID_INSTANCE_OBJECT,
+        INVALID_INSTANCE_OBJECT
     }
 }

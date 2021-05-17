@@ -1,6 +1,7 @@
 package ktpweb.adventurergroups.service;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -127,6 +128,17 @@ public class InstanceService
 
         log.info("Created Instance with id: {}", instanceEntity.getId());
 
+        // Update inverse side of Instance-Owner relationship because it doesn't
+        // automatically do that?!?!
+        Set<Instance> instanceList = ownerEntity.getInstances();
+
+        if (instanceList == null)
+            instanceList = new HashSet<Instance>();
+
+        instanceList.add(instanceEntity);
+
+        ownerEntity.setInstances(instanceList);
+
         try
         {
             Hibernate.initialize(instanceEntity.getMaintainers());
@@ -140,7 +152,7 @@ public class InstanceService
             throw generateException(
                 EXCEPTION_PRIMER_MODEL + instanceEntity.getId()
                     + ". Error reading from database",
-                InstanceServiceException.Codes.DATABASE_ERROR_READ, ex);
+                InstanceServiceException.Codes.DATABASE_ERROR_READ_MAPPING, ex);
         }
     }
 
@@ -210,7 +222,7 @@ public class InstanceService
             throw generateException(
                 EXCEPTION_PRIMER_MODEL + instance.getId()
                     + ". Error reading from database",
-                InstanceServiceException.Codes.DATABASE_ERROR_READ, ex);
+                InstanceServiceException.Codes.DATABASE_ERROR_READ_MAPPING, ex);
         }
     }
 
@@ -280,7 +292,7 @@ public class InstanceService
             throw generateException(
                 EXCEPTION_PRIMER_MODEL + instance.getId()
                     + ". Error reading from database",
-                InstanceServiceException.Codes.DATABASE_ERROR_READ, ex);
+                InstanceServiceException.Codes.DATABASE_ERROR_READ_MAPPING, ex);
         }
     }
 

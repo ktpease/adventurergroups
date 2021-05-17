@@ -32,6 +32,7 @@ public class InstanceServiceException extends Exception
     {
         DATABASE_ERROR_READ,
         DATABASE_ERROR_WRITE,
+        DATABASE_ERROR_READ_MAPPING,
         NULL_INSTANCE_OBJECT,
         INSTANCE_NOT_FOUND,
         INSTANCE_ALREADY_EXISTS,

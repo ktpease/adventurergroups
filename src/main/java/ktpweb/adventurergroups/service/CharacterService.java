@@ -1,6 +1,7 @@
 package ktpweb.adventurergroups.service;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -180,6 +181,17 @@ public class CharacterService
 
         log.info("Created Character with id: {}", characterEntity.getId());
 
+        // Update inverse side of Character-Instance relationship because
+        // it doesn't automatically do that?!?!
+        Set<Character> characterList = instanceEntity.getCharacters();
+
+        if (characterList == null)
+            characterList = new HashSet<Character>();
+
+        characterList.add(characterEntity);
+
+        instanceEntity.setCharacters(characterList);
+
         try
         {
             return getCharacterDto(characterEntity);
@@ -189,7 +201,7 @@ public class CharacterService
             throw generateException(
                 EXCEPTION_PRIMER_CHARACTER_MODEL + characterEntity.getId()
                     + ". Error reading from database",
-                CharacterServiceException.Codes.DATABASE_ERROR_READ, ex);
+                CharacterServiceException.Codes.DATABASE_ERROR_READ_MAPPING, ex);
         }
     }
 
@@ -230,7 +242,7 @@ public class CharacterService
                 CharacterServiceException.Codes.INSTANCE_NOT_FOUND);
         }
 
-        if (instanceEntity.getActive())
+        if (!instanceEntity.getActive())
         {
             throw generateException(
                 EXCEPTION_PRIMER_GROUP_CREATE + instance.getId()
@@ -263,6 +275,17 @@ public class CharacterService
         log.info("Created Character Group with id: {}",
             characterGroupEntity.getId());
 
+        // Update inverse side of CharacterGroup-Instance relationship because
+        // it doesn't automatically do that?!?!
+        Set<CharacterGroup> groupList = instanceEntity.getCharacterGroups();
+
+        if (groupList == null)
+            groupList = new HashSet<CharacterGroup>();
+
+        groupList.add(characterGroupEntity);
+
+        instanceEntity.setCharacterGroups(groupList);
+
         try
         {
             return getCharacterGroupDto(characterGroupEntity);
@@ -272,7 +295,7 @@ public class CharacterService
             throw generateException(
                 EXCEPTION_PRIMER_GROUP_MODEL + characterGroupEntity.getId()
                     + ". Error reading from database",
-                CharacterServiceException.Codes.DATABASE_ERROR_READ, ex);
+                CharacterServiceException.Codes.DATABASE_ERROR_READ_MAPPING, ex);
         }
     }
 
