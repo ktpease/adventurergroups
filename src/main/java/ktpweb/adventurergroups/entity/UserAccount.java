@@ -36,7 +36,8 @@ public class UserAccount
     @Setter(AccessLevel.NONE)
     private Long id;
 
-    private Boolean deleted;
+    @Column(nullable = false)
+    private Boolean deleted = false;
 
     @Enumerated(EnumType.ORDINAL)
     private UserAccountRoles role;

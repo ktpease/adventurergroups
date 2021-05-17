@@ -41,15 +41,16 @@ public class CharacterService
     @Autowired
     private InstanceService instanceService;
 
+    // -----------------------------------------------------------------------------------------------------------------
+    // Character-related public methods.
+    // -----------------------------------------------------------------------------------------------------------------
+
     private final String DEFAULT_CHARACTER_NAME = "New Character";
-    private final String DEFAULT_GROUP_NAME = "New Group";
 
     private final String EXCEPTION_PRIMER_CHARACTER_CREATE = "Cannot create Character for Instance id: ";
-
-    private final String EXCEPTION_PRIMER_GROUP_CREATE = "Cannot create Character Group for Instance id: ";
+    private final String EXCEPTION_PRIMER_CHARACTER_RETRIEVE_BY_ID = "Cannot retrieve Character with id: ";
 
     private final String EXCEPTION_PRIMER_CHARACTER_MODEL = "Cannot return model for Character with id: ";
-    private final String EXCEPTION_PRIMER_GROUP_MODEL = "Cannot return model for Character Group with id: ";
 
     @Transactional
     public CharacterDto createCharacter(InstanceDto instance,
@@ -140,7 +141,8 @@ public class CharacterService
         }
 
         if ((creatorEntity.getRole() == UserAccountRoles.USER_ROLE_OWNER
-            && creatorEntity.getInstances().contains(instanceEntity))
+            && (creatorEntity.getInstances() == null
+                || !creatorEntity.getInstances().contains(instanceEntity)))
             || (creatorEntity.getRole() == UserAccountRoles.USER_ROLE_MAINTAINER
                 && creatorEntity.getParentInstance() != instanceEntity))
         {
@@ -165,7 +167,6 @@ public class CharacterService
         characterEntity.setDescription("");
         characterEntity.setCreatedBy(creatorEntity);
         characterEntity.setCreateDate(LocalDateTime.now());
-        characterEntity.setDeleted(false);
 
         try
         {
@@ -201,9 +202,66 @@ public class CharacterService
             throw generateException(
                 EXCEPTION_PRIMER_CHARACTER_MODEL + characterEntity.getId()
                     + ". Error reading from database",
-                CharacterServiceException.Codes.DATABASE_ERROR_READ_MAPPING, ex);
+                CharacterServiceException.Codes.DATABASE_ERROR_READ_MAPPING,
+                ex);
         }
     }
+
+    @Transactional
+    public CharacterDto retrieveCharacter(Long characterId)
+        throws CharacterServiceException
+    {
+        Character characterEntity;
+
+        // Attempt to read from the database.
+        try
+        {
+            characterEntity = getCharacterEntity(characterId);
+        }
+        catch (Exception ex)
+        {
+            throw generateException(
+                EXCEPTION_PRIMER_CHARACTER_RETRIEVE_BY_ID + characterId
+                    + ". Error reading from database",
+                CharacterServiceException.Codes.DATABASE_ERROR_READ, ex);
+        }
+
+        // Check if the account exists.
+        if (characterEntity == null)
+        {
+            throw generateException(
+                EXCEPTION_PRIMER_CHARACTER_RETRIEVE_BY_ID + characterId
+                    + ". Instance not found",
+                CharacterServiceException.Codes.CHARACTER_NOT_FOUND);
+        }
+
+        log.info("Found Character with id: {}", characterEntity.getId());
+
+        // Return a full DTO.
+        try
+        {
+            return getCharacterDto(characterEntity);
+        }
+        catch (Exception ex)
+        {
+            throw generateException(
+                EXCEPTION_PRIMER_CHARACTER_MODEL + characterEntity.getId()
+                    + ". Error reading from database",
+                CharacterServiceException.Codes.DATABASE_ERROR_READ_MAPPING,
+                ex);
+        }
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------
+    // Character Group-related public methods.
+    // -----------------------------------------------------------------------------------------------------------------
+
+    private final String DEFAULT_GROUP_NAME = "New Group";
+
+    private final String EXCEPTION_PRIMER_GROUP_CREATE = "Cannot create Character Group for Instance id: ";
+    private final String EXCEPTION_PRIMER_GROUP_RETRIEVE_BY_ID = "Cannot retrieve Character Group with id: ";
+
+    private final String EXCEPTION_PRIMER_GROUP_MODEL = "Cannot return model for Character Group with id: ";
 
     @Transactional
     public CharacterGroupDto createCharacterGroup(InstanceDto instance)
@@ -257,7 +315,6 @@ public class CharacterService
         characterGroupEntity.setName(DEFAULT_GROUP_NAME);
         characterGroupEntity.setDescription("");
         characterGroupEntity.setCreateDate(LocalDateTime.now());
-        characterGroupEntity.setDeleted(false);
 
         try
         {
@@ -295,9 +352,60 @@ public class CharacterService
             throw generateException(
                 EXCEPTION_PRIMER_GROUP_MODEL + characterGroupEntity.getId()
                     + ". Error reading from database",
-                CharacterServiceException.Codes.DATABASE_ERROR_READ_MAPPING, ex);
+                CharacterServiceException.Codes.DATABASE_ERROR_READ_MAPPING,
+                ex);
         }
     }
+
+    @Transactional
+    public CharacterGroupDto retrieveCharacterGroup(Long characterGroupId)
+        throws CharacterServiceException
+    {
+        CharacterGroup characterGroupEntity;
+
+        // Attempt to read from the database.
+        try
+        {
+            characterGroupEntity = getCharacterGroupEntity(characterGroupId);
+        }
+        catch (Exception ex)
+        {
+            throw generateException(
+                EXCEPTION_PRIMER_GROUP_RETRIEVE_BY_ID + characterGroupId
+                    + ". Error reading from database",
+                CharacterServiceException.Codes.DATABASE_ERROR_READ, ex);
+        }
+
+        // Check if the account exists.
+        if (characterGroupEntity == null)
+        {
+            throw generateException(
+                EXCEPTION_PRIMER_GROUP_RETRIEVE_BY_ID + characterGroupId
+                    + ". Character Group not found",
+                CharacterServiceException.Codes.CHARACTER_GROUP_NOT_FOUND);
+        }
+
+        log.info("Found Character Group with id: {}",
+            characterGroupEntity.getId());
+
+        // Return a full DTO.
+        try
+        {
+            return getCharacterGroupDto(characterGroupEntity);
+        }
+        catch (Exception ex)
+        {
+            throw generateException(
+                EXCEPTION_PRIMER_GROUP_MODEL + characterGroupEntity.getId()
+                    + ". Error reading from database",
+                CharacterServiceException.Codes.DATABASE_ERROR_READ_MAPPING,
+                ex);
+        }
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------
+    // General methods, not to be used with business layer.
+    // -----------------------------------------------------------------------------------------------------------------
 
     protected Character getCharacterEntity(Long id) throws Exception
     {
@@ -305,8 +413,8 @@ public class CharacterService
         {
             Character character = characterRepository.findById(id).orElse(null);
 
-            return (character != null && !character.getDeleted()) ? character
-                : null;
+            return (character == null || character.getDeleted()) ? null
+                : character;
         }
         catch (IllegalArgumentException iae)
         {
@@ -343,6 +451,10 @@ public class CharacterService
         return getCharacterGroupEntity(characterGroupDto.getId());
     }
 
+    // -----------------------------------------------------------------------------------------------------------------
+    // DTO Mapping methods.
+    // -----------------------------------------------------------------------------------------------------------------
+
     protected CharacterDto getCharacterDto(Character character) throws Exception
     {
         CharacterDto dto = new CharacterDto();
@@ -350,9 +462,15 @@ public class CharacterService
         dto.setId(character.getId());
         dto.setName(character.getName());
         dto.setDescription(character.getDescription());
-        dto.setInstanceId(character.getInstance().getId());
-        dto.setMaintainerId(character.getMaintainer().getId());
-        dto.setCharacterGroupId(character.getCharacterGroup().getId());
+        dto.setInstanceId(
+            character.getInstance() != null ? character.getInstance().getId()
+                : null);
+        dto.setMaintainerId(character.getMaintainer() != null
+            ? character.getMaintainer().getId()
+            : null);
+        dto.setCharacterGroupId(character.getCharacterGroup() != null
+            ? character.getCharacterGroup().getId()
+            : null);
         dto.setCreateDate(character.getCreateDate());
 
         return dto;
@@ -364,7 +482,8 @@ public class CharacterService
         CharacterGroupDto dto = new CharacterGroupDto();
 
         dto.setId(cg.getId());
-        dto.setInstanceId(cg.getInstance().getId());
+        dto.setInstanceId(
+            cg.getInstance() != null ? cg.getInstance().getId() : null);
         dto.setName(cg.getName());
         dto.setDescription(cg.getDescription());
         dto.setColorPrimary(cg.getColorPrimary());
@@ -375,6 +494,10 @@ public class CharacterService
 
         return dto;
     }
+
+    // -----------------------------------------------------------------------------------------------------------------
+    // Exception handling methods.
+    // -----------------------------------------------------------------------------------------------------------------
 
     private CharacterServiceException generateException(String message,
         CharacterServiceException.Codes code)

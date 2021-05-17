@@ -33,9 +33,11 @@ public class Instance
     @Setter(AccessLevel.NONE)
     private Long id;
 
-    private Boolean active;
+    @Column(nullable = false)
+    private Boolean active = false;
     
-    private Boolean deleted;
+    @Column(nullable = false)
+    private Boolean deleted = false;
 
     @Column(length = 20)
     private String subdomainName;

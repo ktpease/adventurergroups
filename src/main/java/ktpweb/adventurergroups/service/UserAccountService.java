@@ -42,17 +42,14 @@ public class UserAccountService
     @Autowired
     private CharacterService characterService;
 
+    // -----------------------------------------------------------------------------------------------------------------
+    // Admin-related public methods.
+    // -----------------------------------------------------------------------------------------------------------------
+
     private final String EXCEPTION_PRIMER_ADMIN_CREATE = "Cannot create Admin account with username: ";
-
-    private final String EXCEPTION_PRIMER_OWNER_CREATE = "Cannot create Owner account with username: ";
-
-    private final String EXCEPTION_PRIMER_MAINTAINER_CREATE_FOR_INSTANCE = "Cannot create transient Maintainer account on Instance id: ";
-    private final String EXCEPTION_PRIMER_MAINTAINER_CREATE_FOR_CHARACTER = "Cannot create transient Maintainer account for Character id: ";
-    private final String EXCEPTION_PRIMER_MAINTAINER_REGISTER = "Cannot register transient Maintainer account with id: ";
+    private final String EXCEPTION_PRIMER_ADMIN_RETRIEVE_BY_ID = "Cannot retrieve Admin account with id: ";
 
     private final String EXCEPTION_PRIMER_ADMIN_MODEL = "Cannot return model for Admin account with id: ";
-    private final String EXCEPTION_PRIMER_OWNER_MODEL = "Cannot return model for Owner account with id: ";
-    private final String EXCEPTION_PRIMER_MAINTAINER_MODEL = "Cannot return model for Maintainer account with id: ";
 
     @Transactional
     public AdminDto createAdmin(String username, String password, String email,
@@ -97,7 +94,6 @@ public class UserAccountService
             StringUtils.hasText(displayname) ? displayname : username);
         accountEntity.setRole(UserAccountRoles.USER_ROLE_ADMIN);
         accountEntity.setCreateDate(LocalDateTime.now());
-        accountEntity.setDeleted(false);
 
         try
         {
@@ -127,6 +123,69 @@ public class UserAccountService
                 ex);
         }
     }
+
+    @Transactional
+    public AdminDto retrieveAdmin(Long adminId)
+        throws UserAccountServiceException
+    {
+        UserAccount accountEntity;
+
+        // Attempt to read from the database.
+        try
+        {
+            accountEntity = getUserAccountEntity(adminId);
+        }
+        catch (Exception ex)
+        {
+            throw generateException(
+                EXCEPTION_PRIMER_ADMIN_RETRIEVE_BY_ID + adminId
+                    + ". Error reading from database",
+                UserAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
+        }
+
+        // Check if the account exists.
+        if (accountEntity == null)
+        {
+            throw generateException(
+                EXCEPTION_PRIMER_ADMIN_RETRIEVE_BY_ID + adminId
+                    + ". User account not found",
+                UserAccountServiceException.Codes.ACCOUNT_NOT_FOUND);
+        }
+
+        // Check if the account is in the correct role.
+        if (accountEntity.getRole() != UserAccountRoles.USER_ROLE_ADMIN)
+        {
+            throw generateException(
+                EXCEPTION_PRIMER_ADMIN_RETRIEVE_BY_ID + adminId
+                    + ". Invalid role",
+                UserAccountServiceException.Codes.INVALID_ROLE);
+        }
+
+        log.info("Found Admin account with id: {}", accountEntity.getId());
+
+        // return a full DTO.
+        try
+        {
+            return getAdminDto(accountEntity);
+        }
+        catch (Exception ex)
+        {
+            throw generateException(
+                EXCEPTION_PRIMER_ADMIN_MODEL + accountEntity.getId()
+                    + ". Error reading from database",
+                UserAccountServiceException.Codes.DATABASE_ERROR_READ_MAPPING,
+                ex);
+        }
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------
+    // Owner-related public methods.
+    // -----------------------------------------------------------------------------------------------------------------
+
+    private final String EXCEPTION_PRIMER_OWNER_CREATE = "Cannot create Owner account with username: ";
+    private final String EXCEPTION_PRIMER_OWNER_RETRIEVE_BY_ID = "Cannot retrieve Owner account with id: ";
+
+    private final String EXCEPTION_PRIMER_OWNER_MODEL = "Cannot return model for Owner account with id: ";
 
     @Transactional
     public OwnerDto createOwner(String username, String password, String email,
@@ -171,7 +230,6 @@ public class UserAccountService
             StringUtils.hasText(displayname) ? displayname : username);
         accountEntity.setRole(UserAccountRoles.USER_ROLE_OWNER);
         accountEntity.setCreateDate(LocalDateTime.now());
-        accountEntity.setDeleted(false);
 
         try
         {
@@ -203,6 +261,73 @@ public class UserAccountService
                 ex);
         }
     }
+
+    @Transactional
+    public OwnerDto retrieveOwner(Long ownerId)
+        throws UserAccountServiceException
+    {
+        UserAccount accountEntity;
+
+        // Attempt to read from the database.
+        try
+        {
+            accountEntity = getUserAccountEntity(ownerId);
+        }
+        catch (Exception ex)
+        {
+            throw generateException(
+                EXCEPTION_PRIMER_OWNER_RETRIEVE_BY_ID + ownerId
+                    + ". Error reading from database",
+                UserAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
+        }
+
+        // Check if the account exists.
+        if (accountEntity == null)
+        {
+            throw generateException(
+                EXCEPTION_PRIMER_OWNER_RETRIEVE_BY_ID + ownerId
+                    + ". User account not found",
+                UserAccountServiceException.Codes.ACCOUNT_NOT_FOUND);
+        }
+
+        // Check if the account is in the correct role.
+        if (accountEntity.getRole() != UserAccountRoles.USER_ROLE_OWNER)
+        {
+            throw generateException(
+                EXCEPTION_PRIMER_OWNER_RETRIEVE_BY_ID + ownerId
+                    + ". Invalid role",
+                UserAccountServiceException.Codes.INVALID_ROLE);
+        }
+
+        log.info("Found Owner account with id: {}", accountEntity.getId());
+
+        // Prepare collection objects and return a full DTO.
+        try
+        {
+            Hibernate.initialize(accountEntity.getInstances());
+
+            return getOwnerDto(accountEntity);
+        }
+        catch (Exception ex)
+        {
+            throw generateException(
+                EXCEPTION_PRIMER_OWNER_MODEL + accountEntity.getId()
+                    + ". Error reading from database",
+                UserAccountServiceException.Codes.DATABASE_ERROR_READ_MAPPING,
+                ex);
+        }
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------
+    // Maintainer-related public methods.
+    // -----------------------------------------------------------------------------------------------------------------
+
+    private final String EXCEPTION_PRIMER_MAINTAINER_CREATE_FOR_INSTANCE = "Cannot create transient Maintainer account on Instance id: ";
+    private final String EXCEPTION_PRIMER_MAINTAINER_CREATE_FOR_CHARACTER = "Cannot create transient Maintainer account for Character id: ";
+    private final String EXCEPTION_PRIMER_MAINTAINER_REGISTER = "Cannot register transient Maintainer account with id: ";
+    private final String EXCEPTION_PRIMER_MAINTAINER_RETRIEVE_BY_ID = "Cannot retrieve Maintainer account with id: ";
+
+    private final String EXCEPTION_PRIMER_MAINTAINER_MODEL = "Cannot return model for Maintainer account with id: ";
 
     @Transactional
     public MaintainerDto createTransientMaintainer(InstanceDto parentInstance)
@@ -249,7 +374,6 @@ public class UserAccountService
         accountEntity.setInviteToken("newrandomtoken");
         accountEntity.setParentInstance(instanceEntity);
         accountEntity.setCreateDate(LocalDateTime.now());
-        accountEntity.setDeleted(false);
 
         try
         {
@@ -547,6 +671,66 @@ public class UserAccountService
         }
     }
 
+    @Transactional
+    public MaintainerDto retrieveMaintainer(Long maintainerId)
+        throws UserAccountServiceException
+    {
+        UserAccount accountEntity;
+
+        // Attempt to read from the database.
+        try
+        {
+            accountEntity = getUserAccountEntity(maintainerId);
+        }
+        catch (Exception ex)
+        {
+            throw generateException(
+                EXCEPTION_PRIMER_MAINTAINER_RETRIEVE_BY_ID + maintainerId
+                    + ". Error reading from database",
+                UserAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
+        }
+
+        // Check if the account exists.
+        if (accountEntity == null)
+        {
+            throw generateException(
+                EXCEPTION_PRIMER_MAINTAINER_RETRIEVE_BY_ID + maintainerId
+                    + ". User account not found",
+                UserAccountServiceException.Codes.ACCOUNT_NOT_FOUND);
+        }
+
+        // Check if the account is in the correct role.
+        if (accountEntity.getRole() != UserAccountRoles.USER_ROLE_ADMIN)
+        {
+            throw generateException(
+                EXCEPTION_PRIMER_MAINTAINER_RETRIEVE_BY_ID + maintainerId
+                    + ". Invalid role",
+                UserAccountServiceException.Codes.INVALID_ROLE);
+        }
+
+        log.info("Found Admin account with id: {}", accountEntity.getId());
+
+        // Prepare collection objects and return a full DTO.
+        try
+        {
+            Hibernate.initialize(accountEntity.getCharacters());
+
+            return getMaintainerDto(accountEntity);
+        }
+        catch (Exception ex)
+        {
+            throw generateException(
+                EXCEPTION_PRIMER_MAINTAINER_MODEL + accountEntity.getId()
+                    + ". Error reading from database",
+                UserAccountServiceException.Codes.DATABASE_ERROR_READ_MAPPING,
+                ex);
+        }
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------
+    // General User Account methods, not to be used with business layer.
+    // -----------------------------------------------------------------------------------------------------------------
+
     protected UserAccount getUserAccountEntity(Long id) throws Exception
     {
         try
@@ -554,9 +738,8 @@ public class UserAccountService
             UserAccount userAccount = userAccountRepository.findById(id)
                 .orElse(null);
 
-            return (userAccount != null && !userAccount.getDeleted())
-                ? userAccount
-                : null;
+            return (userAccount == null || userAccount.getDeleted()) ? null
+                : userAccount;
         }
         catch (IllegalArgumentException iae)
         {
@@ -568,63 +751,6 @@ public class UserAccountService
         throws Exception
     {
         return getUserAccountEntity(userAccountDto.getId());
-    }
-
-    protected AdminDto getAdminDto(UserAccount ua) throws Exception
-    {
-        AdminDto dto = new AdminDto();
-
-        dto.setId(ua.getId());
-        dto.setUsername(ua.getUsername());
-        dto.setEmail(ua.getEmail());
-        dto.setDisplayname(ua.getDisplayname());
-        dto.setCreateDate(ua.getCreateDate());
-
-        return dto;
-    }
-
-    protected OwnerDto getOwnerDto(UserAccount ua) throws Exception
-    {
-        OwnerDto dto = new OwnerDto();
-
-        dto.setId(ua.getId());
-        dto.setUsername(ua.getUsername());
-        dto.setEmail(ua.getEmail());
-        dto.setDisplayname(ua.getDisplayname());
-        dto.setInstanceIds(Optional.ofNullable(ua.getInstances())
-            .map(Set::stream).orElseGet(Stream::empty).map(i -> i.getId())
-            .collect(Collectors.toSet()));
-
-        dto.setCreateDate(ua.getCreateDate());
-
-        return dto;
-    }
-
-    protected MaintainerDto getMaintainerDto(UserAccount ua) throws Exception
-    {
-        MaintainerDto dto = new MaintainerDto();
-
-        dto.setId(ua.getId());
-        dto.setParentInstanceId(ua.getParentInstance().getId());
-        dto.setCharacterIds(Optional.ofNullable(ua.getCharacters())
-            .map(Set::stream).orElseGet(Stream::empty).map(c -> c.getId())
-            .collect(Collectors.toSet()));
-        dto.setCreateDate(ua.getCreateDate());
-
-        if (ua.getRole() == UserAccountRoles.USER_ROLE_TRANSIENT)
-        {
-            dto.setIsTransient(true);
-            dto.setInviteToken(ua.getInviteToken());
-        }
-        else
-        {
-            dto.setIsTransient(false);
-            dto.setUsername(ua.getUsername());
-            dto.setEmail(ua.getEmail());
-            dto.setDisplayname(ua.getDisplayname());
-        }
-
-        return dto;
     }
 
     private Boolean accountExistsInGlobal(String username, String email)
@@ -677,6 +803,73 @@ public class UserAccountService
 
         return userAccountRepository.exists(Example.of(probe, matcher));
     }
+
+    // -----------------------------------------------------------------------------------------------------------------
+    // DTO Mapping methods.
+    // -----------------------------------------------------------------------------------------------------------------
+
+    protected AdminDto getAdminDto(UserAccount ua) throws Exception
+    {
+        AdminDto dto = new AdminDto();
+
+        dto.setId(ua.getId());
+        dto.setUsername(ua.getUsername());
+        dto.setEmail(ua.getEmail());
+        dto.setDisplayname(ua.getDisplayname());
+        dto.setCreateDate(ua.getCreateDate());
+
+        return dto;
+    }
+
+    protected OwnerDto getOwnerDto(UserAccount ua) throws Exception
+    {
+        OwnerDto dto = new OwnerDto();
+
+        dto.setId(ua.getId());
+        dto.setUsername(ua.getUsername());
+        dto.setEmail(ua.getEmail());
+        dto.setDisplayname(ua.getDisplayname());
+        dto.setInstanceIds(Optional.ofNullable(ua.getInstances())
+            .map(Set::stream).orElseGet(Stream::empty).map(i -> i.getId())
+            .collect(Collectors.toSet()));
+
+        dto.setCreateDate(ua.getCreateDate());
+
+        return dto;
+    }
+
+    protected MaintainerDto getMaintainerDto(UserAccount ua) throws Exception
+    {
+        MaintainerDto dto = new MaintainerDto();
+
+        dto.setId(ua.getId());
+        dto.setParentInstanceId(
+            ua.getParentInstance() != null ? ua.getParentInstance().getId()
+                : null);
+        dto.setCharacterIds(Optional.ofNullable(ua.getCharacters())
+            .map(Set::stream).orElseGet(Stream::empty).map(c -> c.getId())
+            .collect(Collectors.toSet()));
+        dto.setCreateDate(ua.getCreateDate());
+
+        if (ua.getRole() == UserAccountRoles.USER_ROLE_TRANSIENT)
+        {
+            dto.setIsTransient(true);
+            dto.setInviteToken(ua.getInviteToken());
+        }
+        else
+        {
+            dto.setIsTransient(false);
+            dto.setUsername(ua.getUsername());
+            dto.setEmail(ua.getEmail());
+            dto.setDisplayname(ua.getDisplayname());
+        }
+
+        return dto;
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------
+    // Exception handling methods.
+    // -----------------------------------------------------------------------------------------------------------------
 
     private UserAccountServiceException generateException(String message,
         UserAccountServiceException.Codes code)

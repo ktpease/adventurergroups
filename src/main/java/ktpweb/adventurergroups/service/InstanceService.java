@@ -34,9 +34,14 @@ public class InstanceService
     @Autowired
     private UserAccountService userAccountService;
 
+    // -----------------------------------------------------------------------------------------------------------------
+    // Instance-related public methods.
+    // -----------------------------------------------------------------------------------------------------------------
+
     private final String DEFAULT_NAME = "New Instance";
 
     private final String EXCEPTION_PRIMER_CREATE = "Cannot create Instance for owner User Account id: ";
+    private final String EXCEPTION_PRIMER_RETRIEVE_BY_ID = "Cannot retrieve Instance with id: ";
     private final String EXCEPTION_PRIMER_ACTIVATE = "Cannot activate Instance with id: ";
     private final String EXCEPTION_PRIMER_DEACTIVATE = "Cannot deactivate Instance with id: ";
 
@@ -112,7 +117,6 @@ public class InstanceService
         instanceEntity.setSubdomainName(subdomainName);
         instanceEntity.setDisplayName(DEFAULT_NAME);
         instanceEntity.setCreateDate(LocalDateTime.now());
-        instanceEntity.setDeleted(false);
 
         try
         {
@@ -139,6 +143,54 @@ public class InstanceService
 
         ownerEntity.setInstances(instanceList);
 
+        try
+        {
+            Hibernate.initialize(instanceEntity.getMaintainers());
+            Hibernate.initialize(instanceEntity.getCharacters());
+            Hibernate.initialize(instanceEntity.getCharacterGroups());
+
+            return getInstanceDto(instanceEntity);
+        }
+        catch (Exception ex)
+        {
+            throw generateException(
+                EXCEPTION_PRIMER_MODEL + instanceEntity.getId()
+                    + ". Error reading from database",
+                InstanceServiceException.Codes.DATABASE_ERROR_READ_MAPPING, ex);
+        }
+    }
+
+    @Transactional
+    public InstanceDto retrieveInstance(Long instanceId)
+        throws InstanceServiceException
+    {
+        Instance instanceEntity;
+
+        // Attempt to read from the database.
+        try
+        {
+            instanceEntity = getInstanceEntity(instanceId);
+        }
+        catch (Exception ex)
+        {
+            throw generateException(
+                EXCEPTION_PRIMER_RETRIEVE_BY_ID + instanceId
+                    + ". Error reading from database",
+                InstanceServiceException.Codes.DATABASE_ERROR_READ, ex);
+        }
+
+        // Check if the account exists.
+        if (instanceEntity == null)
+        {
+            throw generateException(
+                EXCEPTION_PRIMER_RETRIEVE_BY_ID + instanceId
+                    + ". Instance not found",
+                InstanceServiceException.Codes.INSTANCE_NOT_FOUND);
+        }
+
+        log.info("Found Instance with id: {}", instanceEntity.getId());
+
+        // Prepare collection objects and return a full DTO.
         try
         {
             Hibernate.initialize(instanceEntity.getMaintainers());
@@ -296,14 +348,18 @@ public class InstanceService
         }
     }
 
+    // -----------------------------------------------------------------------------------------------------------------
+    // General methods, not to be used with business layer.
+    // -----------------------------------------------------------------------------------------------------------------
+
     protected Instance getInstanceEntity(Long id) throws Exception
     {
         try
         {
             Instance instance = instanceRepository.findById(id).orElse(null);
 
-            return (instance != null && !instance.getDeleted()) ? instance
-                : null;
+            return (instance == null || instance.getDeleted()) ? null
+                : instance;
         }
         catch (IllegalArgumentException iae)
         {
@@ -317,6 +373,25 @@ public class InstanceService
         return getInstanceEntity(instanceDto.getId());
     }
 
+    private Boolean instanceExists(String subdomainName)
+    {
+        log.debug("Searching for existance of Instance with subdomain name: {}",
+            subdomainName);
+
+        Instance probe = new Instance();
+        probe.setSubdomainName(subdomainName);
+        probe.setDeleted(false);
+
+        ExampleMatcher matcher = ExampleMatcher.matching().withIgnoreCase()
+            .withIgnorePaths("deleted");
+
+        return instanceRepository.exists(Example.of(probe, matcher));
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------
+    // DTO Mapping methods.
+    // -----------------------------------------------------------------------------------------------------------------
+
     protected InstanceDto getInstanceDto(Instance instance) throws Exception
     {
         InstanceDto dto = new InstanceDto();
@@ -325,7 +400,8 @@ public class InstanceService
         dto.setSubdomainName(instance.getSubdomainName());
         dto.setDisplayName(instance.getDisplayName());
         dto.setDescription(instance.getDescription());
-        dto.setOwnerId(instance.getOwner().getId());
+        dto.setOwnerId(
+            instance.getOwner() != null ? instance.getOwner().getId() : null);
         dto.setActive(instance.getActive());
         dto.setCreateDate(instance.getCreateDate());
         dto.setLastActivateDate(instance.getLastActivateDate());
@@ -347,20 +423,9 @@ public class InstanceService
         return dto;
     }
 
-    private Boolean instanceExists(String subdomainName)
-    {
-        log.debug("Searching for existance of Instance with subdomain name: {}",
-            subdomainName);
-
-        Instance probe = new Instance();
-        probe.setSubdomainName(subdomainName);
-        probe.setDeleted(false);
-
-        ExampleMatcher matcher = ExampleMatcher.matching().withIgnoreCase()
-            .withIgnorePaths("deleted");
-
-        return instanceRepository.exists(Example.of(probe, matcher));
-    }
+    // -----------------------------------------------------------------------------------------------------------------
+    // Exception handling methods.
+    // -----------------------------------------------------------------------------------------------------------------
 
     private InstanceServiceException generateException(String message,
         InstanceServiceException.Codes code)

@@ -37,7 +37,8 @@ public class CharacterGroup
     @JoinColumn(name = "instance_id")
     private Instance instance;
 
-    private Boolean deleted;
+    @Column(nullable = false)
+    private Boolean deleted = false;
 
     @Column(length = 50)
     private String name;
