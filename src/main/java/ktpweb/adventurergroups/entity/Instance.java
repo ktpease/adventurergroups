@@ -66,6 +66,7 @@ public class Instance
 
     // Logging
     private LocalDateTime createDate;
+    private LocalDateTime deleteDate;
     private LocalDateTime lastActivateDate;
     private LocalDateTime lastDeactivateDate;
 }

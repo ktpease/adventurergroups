@@ -34,6 +34,7 @@ public class CharacterServiceException extends Exception
         DATABASE_ERROR_WRITE,
         DATABASE_ERROR_READ_MAPPING,
         NULL_CHARACTER_OBJECT,
+        NULL_CHARACTER_GROUP_OBJECT,
         CHARACTER_NOT_FOUND,
         INSTANCE_NOT_FOUND,
         INVALID_INSTANCE_OBJECT,

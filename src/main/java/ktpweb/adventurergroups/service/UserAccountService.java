@@ -46,10 +46,12 @@ public class UserAccountService
     // Admin-related public methods.
     // -----------------------------------------------------------------------------------------------------------------
 
-    private final String EXCEPTION_PRIMER_ADMIN_CREATE = "Cannot create Admin account with username: ";
-    private final String EXCEPTION_PRIMER_ADMIN_RETRIEVE_BY_ID = "Cannot retrieve Admin account with id: ";
+    private final String EXCEPTION_ADMIN_CREATE = "Cannot create Admin account with username: ";
+    private final String EXCEPTION_ADMIN_RETRIEVE = "Cannot retrieve Admin account with user id: ";
+    private final String EXCEPTION_ADMIN_UPDATE = "Cannot update Admin account with user id: ";
+    private final String EXCEPTION_ADMIN_DELETE = "Cannot delete Admin account with user id: ";
 
-    private final String EXCEPTION_PRIMER_ADMIN_MODEL = "Cannot return model for Admin account with id: ";
+    private final String EXCEPTION_ADMIN_MODEL = "Cannot return model for Admin account with user id: ";
 
     @Transactional
     public AdminDto createAdmin(String username, String password, String email,
@@ -62,7 +64,7 @@ public class UserAccountService
         if (!StringUtils.hasText(username))
         {
             throw generateException(
-                EXCEPTION_PRIMER_ADMIN_CREATE + username + ". Invalid username",
+                EXCEPTION_ADMIN_CREATE + username + ". Invalid username",
                 UserAccountServiceException.Codes.INVALID_USERNAME);
         }
 
@@ -70,7 +72,7 @@ public class UserAccountService
         if (!StringUtils.hasText(password))
         {
             throw generateException(
-                EXCEPTION_PRIMER_ADMIN_CREATE + username + ". Invalid password",
+                EXCEPTION_ADMIN_CREATE + username + ". Invalid password",
                 UserAccountServiceException.Codes.INVALID_PASSWORD);
         }
 
@@ -102,7 +104,7 @@ public class UserAccountService
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_PRIMER_ADMIN_CREATE + username
+                EXCEPTION_ADMIN_CREATE + username
                     + ". Error writing to database",
                 UserAccountServiceException.Codes.DATABASE_ERROR_WRITE, ex);
         }
@@ -117,7 +119,7 @@ public class UserAccountService
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_PRIMER_ADMIN_MODEL + accountEntity.getId()
+                EXCEPTION_ADMIN_MODEL + accountEntity.getId()
                     + ". Error reading from database",
                 UserAccountServiceException.Codes.DATABASE_ERROR_READ_MAPPING,
                 ex);
@@ -125,7 +127,7 @@ public class UserAccountService
     }
 
     @Transactional
-    public AdminDto retrieveAdmin(Long adminId)
+    public AdminDto retrieveAdmin(Long userId)
         throws UserAccountServiceException
     {
         UserAccount accountEntity;
@@ -133,12 +135,12 @@ public class UserAccountService
         // Attempt to read from the database.
         try
         {
-            accountEntity = getUserAccountEntity(adminId);
+            accountEntity = getUserAccountEntity(userId);
         }
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_PRIMER_ADMIN_RETRIEVE_BY_ID + adminId
+                EXCEPTION_ADMIN_RETRIEVE + userId
                     + ". Error reading from database",
                 UserAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
@@ -147,8 +149,7 @@ public class UserAccountService
         if (accountEntity == null)
         {
             throw generateException(
-                EXCEPTION_PRIMER_ADMIN_RETRIEVE_BY_ID + adminId
-                    + ". User account not found",
+                EXCEPTION_ADMIN_RETRIEVE + userId + ". User account not found",
                 UserAccountServiceException.Codes.ACCOUNT_NOT_FOUND);
         }
 
@@ -156,8 +157,7 @@ public class UserAccountService
         if (accountEntity.getRole() != UserAccountRoles.USER_ROLE_ADMIN)
         {
             throw generateException(
-                EXCEPTION_PRIMER_ADMIN_RETRIEVE_BY_ID + adminId
-                    + ". Invalid role",
+                EXCEPTION_ADMIN_RETRIEVE + userId + ". Invalid role",
                 UserAccountServiceException.Codes.INVALID_ROLE);
         }
 
@@ -171,21 +171,150 @@ public class UserAccountService
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_PRIMER_ADMIN_MODEL + accountEntity.getId()
+                EXCEPTION_ADMIN_MODEL + accountEntity.getId()
                     + ". Error reading from database",
                 UserAccountServiceException.Codes.DATABASE_ERROR_READ_MAPPING,
                 ex);
         }
     }
 
+    @Transactional
+    public AdminDto updateAdmin(AdminDto admin)
+        throws UserAccountServiceException
+    {
+        if (admin == null)
+        {
+            throw generateException("Attempted update of a null Admin account",
+                UserAccountServiceException.Codes.NULL_ACCOUNT_OBJECT);
+        }
+
+        UserAccount accountEntity;
+
+        // Attempt to read from the database.
+        try
+        {
+            accountEntity = getUserAccountEntity(admin.getId());
+        }
+        catch (Exception ex)
+        {
+            throw generateException(
+                EXCEPTION_ADMIN_UPDATE + admin.getId()
+                    + ". Error reading from database",
+                UserAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
+        }
+
+        // Check if the account exists.
+        if (accountEntity == null)
+        {
+            throw generateException(
+                EXCEPTION_ADMIN_UPDATE + admin.getId()
+                    + ". User account not found",
+                UserAccountServiceException.Codes.ACCOUNT_NOT_FOUND);
+        }
+
+        // Check if the account is in the correct role.
+        if (accountEntity.getRole() != UserAccountRoles.USER_ROLE_ADMIN)
+        {
+            throw generateException(
+                EXCEPTION_ADMIN_UPDATE + admin.getId() + ". Invalid role",
+                UserAccountServiceException.Codes.INVALID_ROLE);
+        }
+
+        // Attempt to modify and save user account.
+        accountEntity.setUsername(admin.getUsername());
+        accountEntity.setEmail(admin.getEmail());
+        accountEntity.setDisplayname(admin.getDisplayname());
+
+        try
+        {
+            accountEntity = userAccountRepository.save(accountEntity);
+        }
+        catch (Exception ex)
+        {
+            throw generateException(
+                EXCEPTION_ADMIN_UPDATE + admin.getId()
+                    + ". Error writing to database",
+                UserAccountServiceException.Codes.DATABASE_ERROR_WRITE, ex);
+        }
+
+        log.info("Updated Admin account with id: {}", admin.getId());
+
+        try
+        {
+            return getAdminDto(accountEntity);
+        }
+        catch (Exception ex)
+        {
+            throw generateException(
+                EXCEPTION_ADMIN_MODEL + accountEntity.getId()
+                    + ". Error reading from database",
+                UserAccountServiceException.Codes.DATABASE_ERROR_READ_MAPPING,
+                ex);
+        }
+    }
+
+    @Transactional
+    public void deleteAdmin(Long userId) throws UserAccountServiceException
+    {
+        UserAccount accountEntity;
+
+        // Attempt to read from the database.
+        try
+        {
+            accountEntity = getUserAccountEntity(userId);
+        }
+        catch (Exception ex)
+        {
+            throw generateException(
+                EXCEPTION_ADMIN_DELETE + userId
+                    + ". Error reading from database",
+                UserAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
+        }
+
+        // Check if the account exists.
+        if (accountEntity == null)
+        {
+            throw generateException(
+                EXCEPTION_ADMIN_DELETE + userId + ". User account not found",
+                UserAccountServiceException.Codes.ACCOUNT_NOT_FOUND);
+        }
+
+        // Check if the account is in the correct role.
+        if (accountEntity.getRole() != UserAccountRoles.USER_ROLE_ADMIN)
+        {
+            throw generateException(
+                EXCEPTION_ADMIN_DELETE + userId + ". Invalid role",
+                UserAccountServiceException.Codes.INVALID_ROLE);
+        }
+
+        // Attempt to soft-delete user account.
+        accountEntity.setDeleted(true);
+        accountEntity.setDeleteDate(LocalDateTime.now());
+
+        try
+        {
+            accountEntity = userAccountRepository.save(accountEntity);
+        }
+        catch (Exception ex)
+        {
+            throw generateException(
+                EXCEPTION_ADMIN_DELETE + userId + ". Error writing to database",
+                UserAccountServiceException.Codes.DATABASE_ERROR_WRITE, ex);
+        }
+
+        log.info("Deleted Admin account with id: {}", userId);
+    }
+
     // -----------------------------------------------------------------------------------------------------------------
     // Owner-related public methods.
     // -----------------------------------------------------------------------------------------------------------------
 
-    private final String EXCEPTION_PRIMER_OWNER_CREATE = "Cannot create Owner account with username: ";
-    private final String EXCEPTION_PRIMER_OWNER_RETRIEVE_BY_ID = "Cannot retrieve Owner account with id: ";
+    private final String EXCEPTION_OWNER_CREATE = "Cannot create Owner account with username: ";
+    private final String EXCEPTION_OWNER_RETRIEVE = "Cannot retrieve Owner account with user id: ";
+    private final String EXCEPTION_OWNER_UPDATE = "Cannot update Owner account with user id: ";
+    private final String EXCEPTION_OWNER_DELETE = "Cannot delete Owner account with user id: ";
 
-    private final String EXCEPTION_PRIMER_OWNER_MODEL = "Cannot return model for Owner account with id: ";
+    private final String EXCEPTION_OWNER_MODEL = "Cannot return model for Owner account with user id: ";
 
     @Transactional
     public OwnerDto createOwner(String username, String password, String email,
@@ -198,7 +327,7 @@ public class UserAccountService
         if (!StringUtils.hasText(username))
         {
             throw generateException(
-                EXCEPTION_PRIMER_OWNER_CREATE + username + ". Invalid username",
+                EXCEPTION_OWNER_CREATE + username + ". Invalid username",
                 UserAccountServiceException.Codes.INVALID_USERNAME);
         }
 
@@ -206,7 +335,7 @@ public class UserAccountService
         if (!StringUtils.hasText(password))
         {
             throw generateException(
-                EXCEPTION_PRIMER_OWNER_CREATE + username + ". Invalid password",
+                EXCEPTION_OWNER_CREATE + username + ". Invalid password",
                 UserAccountServiceException.Codes.INVALID_PASSWORD);
         }
 
@@ -238,7 +367,7 @@ public class UserAccountService
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_PRIMER_OWNER_CREATE + username
+                EXCEPTION_OWNER_CREATE + username
                     + ". Error writing to database",
                 UserAccountServiceException.Codes.DATABASE_ERROR_WRITE, ex);
         }
@@ -255,7 +384,7 @@ public class UserAccountService
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_PRIMER_OWNER_MODEL + accountEntity.getId()
+                EXCEPTION_OWNER_MODEL + accountEntity.getId()
                     + ". Error reading from database",
                 UserAccountServiceException.Codes.DATABASE_ERROR_READ_MAPPING,
                 ex);
@@ -263,7 +392,7 @@ public class UserAccountService
     }
 
     @Transactional
-    public OwnerDto retrieveOwner(Long ownerId)
+    public OwnerDto retrieveOwner(Long userId)
         throws UserAccountServiceException
     {
         UserAccount accountEntity;
@@ -271,12 +400,12 @@ public class UserAccountService
         // Attempt to read from the database.
         try
         {
-            accountEntity = getUserAccountEntity(ownerId);
+            accountEntity = getUserAccountEntity(userId);
         }
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_PRIMER_OWNER_RETRIEVE_BY_ID + ownerId
+                EXCEPTION_OWNER_RETRIEVE + userId
                     + ". Error reading from database",
                 UserAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
@@ -285,8 +414,7 @@ public class UserAccountService
         if (accountEntity == null)
         {
             throw generateException(
-                EXCEPTION_PRIMER_OWNER_RETRIEVE_BY_ID + ownerId
-                    + ". User account not found",
+                EXCEPTION_OWNER_RETRIEVE + userId + ". User account not found",
                 UserAccountServiceException.Codes.ACCOUNT_NOT_FOUND);
         }
 
@@ -294,8 +422,7 @@ public class UserAccountService
         if (accountEntity.getRole() != UserAccountRoles.USER_ROLE_OWNER)
         {
             throw generateException(
-                EXCEPTION_PRIMER_OWNER_RETRIEVE_BY_ID + ownerId
-                    + ". Invalid role",
+                EXCEPTION_OWNER_RETRIEVE + userId + ". Invalid role",
                 UserAccountServiceException.Codes.INVALID_ROLE);
         }
 
@@ -311,23 +438,157 @@ public class UserAccountService
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_PRIMER_OWNER_MODEL + accountEntity.getId()
+                EXCEPTION_OWNER_MODEL + accountEntity.getId()
                     + ". Error reading from database",
                 UserAccountServiceException.Codes.DATABASE_ERROR_READ_MAPPING,
                 ex);
         }
     }
 
+    @Transactional
+    public OwnerDto updateOwner(OwnerDto owner)
+        throws UserAccountServiceException
+    {
+        if (owner == null)
+        {
+            throw generateException("Attempted update of a null Owner account",
+                UserAccountServiceException.Codes.NULL_ACCOUNT_OBJECT);
+        }
+
+        UserAccount accountEntity;
+
+        // Attempt to read from the database.
+        try
+        {
+            accountEntity = getUserAccountEntity(owner.getId());
+        }
+        catch (Exception ex)
+        {
+            throw generateException(
+                EXCEPTION_OWNER_UPDATE + owner.getId()
+                    + ". Error reading from database",
+                UserAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
+        }
+
+        // Check if the account exists.
+        if (accountEntity == null)
+        {
+            throw generateException(
+                EXCEPTION_OWNER_UPDATE + owner.getId()
+                    + ". User account not found",
+                UserAccountServiceException.Codes.ACCOUNT_NOT_FOUND);
+        }
+
+        // Check if the account is in the correct role.
+        if (accountEntity.getRole() != UserAccountRoles.USER_ROLE_OWNER)
+        {
+            throw generateException(
+                EXCEPTION_OWNER_UPDATE + owner.getId() + ". Invalid role",
+                UserAccountServiceException.Codes.INVALID_ROLE);
+        }
+
+        // Attempt to modify and save user account.
+        accountEntity.setUsername(owner.getUsername());
+        accountEntity.setEmail(owner.getEmail());
+        accountEntity.setDisplayname(owner.getDisplayname());
+
+        try
+        {
+            accountEntity = userAccountRepository.save(accountEntity);
+        }
+        catch (Exception ex)
+        {
+            throw generateException(
+                EXCEPTION_OWNER_UPDATE + owner.getId()
+                    + ". Error writing to database",
+                UserAccountServiceException.Codes.DATABASE_ERROR_WRITE, ex);
+        }
+
+        log.info("Updated Owner account with id: {}", owner.getId());
+
+        try
+        {
+            Hibernate.initialize(accountEntity.getInstances());
+
+            return getOwnerDto(accountEntity);
+        }
+        catch (Exception ex)
+        {
+            throw generateException(
+                EXCEPTION_OWNER_MODEL + accountEntity.getId()
+                    + ". Error reading from database",
+                UserAccountServiceException.Codes.DATABASE_ERROR_READ_MAPPING,
+                ex);
+        }
+    }
+
+    @Transactional
+    public void deleteOwner(Long userId) throws UserAccountServiceException
+    {
+        UserAccount accountEntity;
+
+        // Attempt to read from the database.
+        try
+        {
+            accountEntity = getUserAccountEntity(userId);
+        }
+        catch (Exception ex)
+        {
+            throw generateException(
+                EXCEPTION_OWNER_DELETE + userId
+                    + ". Error reading from database",
+                UserAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
+        }
+
+        // Check if the account exists.
+        if (accountEntity == null)
+        {
+            throw generateException(
+                EXCEPTION_OWNER_DELETE + userId + ". User account not found",
+                UserAccountServiceException.Codes.ACCOUNT_NOT_FOUND);
+        }
+
+        // Check if the account is in the correct role.
+        if (accountEntity.getRole() != UserAccountRoles.USER_ROLE_OWNER)
+        {
+            throw generateException(
+                EXCEPTION_OWNER_DELETE + userId + ". Invalid role",
+                UserAccountServiceException.Codes.INVALID_ROLE);
+        }
+
+        // TODO: Soft-delete all associated Instances, Characters, and
+        // Character Groups.
+
+        // Attempt to soft-delete user account.
+        accountEntity.setDeleted(true);
+        accountEntity.setDeleteDate(LocalDateTime.now());
+
+        try
+        {
+            accountEntity = userAccountRepository.save(accountEntity);
+        }
+        catch (Exception ex)
+        {
+            throw generateException(
+                EXCEPTION_OWNER_DELETE + userId + ". Error writing to database",
+                UserAccountServiceException.Codes.DATABASE_ERROR_WRITE, ex);
+        }
+
+        log.info("Deleted Owner account with id: {}", userId);
+    }
+
     // -----------------------------------------------------------------------------------------------------------------
     // Maintainer-related public methods.
     // -----------------------------------------------------------------------------------------------------------------
 
-    private final String EXCEPTION_PRIMER_MAINTAINER_CREATE_FOR_INSTANCE = "Cannot create transient Maintainer account on Instance id: ";
-    private final String EXCEPTION_PRIMER_MAINTAINER_CREATE_FOR_CHARACTER = "Cannot create transient Maintainer account for Character id: ";
-    private final String EXCEPTION_PRIMER_MAINTAINER_REGISTER = "Cannot register transient Maintainer account with id: ";
-    private final String EXCEPTION_PRIMER_MAINTAINER_RETRIEVE_BY_ID = "Cannot retrieve Maintainer account with id: ";
+    private final String EXCEPTION_MAINTAINER_CREATE_FOR_INSTANCE = "Cannot create transient Maintainer account on Instance id: ";
+    private final String EXCEPTION_MAINTAINER_CREATE_FOR_CHARACTER = "Cannot create transient Maintainer account for Character id: ";
+    private final String EXCEPTION_MAINTAINER_REGISTER = "Cannot register transient Maintainer account with user id: ";
+    private final String EXCEPTION_MAINTAINER_RETRIEVE = "Cannot retrieve Maintainer account with user id: ";
+    private final String EXCEPTION_MAINTAINER_UPDATE = "Cannot update Maintainer account with user id: ";
+    private final String EXCEPTION_MAINTAINER_DELETE = "Cannot delete Maintainer account with user id: ";
 
-    private final String EXCEPTION_PRIMER_MAINTAINER_MODEL = "Cannot return model for Maintainer account with id: ";
+    private final String EXCEPTION_MAINTAINER_MODEL = "Cannot return model for Maintainer account with user id: ";
 
     @Transactional
     public MaintainerDto createTransientMaintainer(InstanceDto parentInstance)
@@ -353,7 +614,7 @@ public class UserAccountService
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_PRIMER_MAINTAINER_CREATE_FOR_INSTANCE
+                EXCEPTION_MAINTAINER_CREATE_FOR_INSTANCE
                     + parentInstance.getId()
                     + ". Error reading Instance from database",
                 UserAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
@@ -362,7 +623,7 @@ public class UserAccountService
         if (instanceEntity == null)
         {
             throw generateException(
-                EXCEPTION_PRIMER_MAINTAINER_CREATE_FOR_INSTANCE
+                EXCEPTION_MAINTAINER_CREATE_FOR_INSTANCE
                     + parentInstance.getId() + ". Instance not found",
                 UserAccountServiceException.Codes.INSTANCE_NOT_FOUND);
         }
@@ -382,7 +643,7 @@ public class UserAccountService
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_PRIMER_MAINTAINER_CREATE_FOR_INSTANCE
+                EXCEPTION_MAINTAINER_CREATE_FOR_INSTANCE
                     + parentInstance.getId() + ". Error writing to database",
                 UserAccountServiceException.Codes.DATABASE_ERROR_WRITE, ex);
         }
@@ -410,7 +671,7 @@ public class UserAccountService
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_PRIMER_MAINTAINER_MODEL + accountEntity.getId()
+                EXCEPTION_MAINTAINER_MODEL + accountEntity.getId()
                     + ". Error reading from database",
                 UserAccountServiceException.Codes.DATABASE_ERROR_READ_MAPPING,
                 ex);
@@ -441,8 +702,7 @@ public class UserAccountService
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_PRIMER_MAINTAINER_CREATE_FOR_CHARACTER
-                    + character.getId()
+                EXCEPTION_MAINTAINER_CREATE_FOR_CHARACTER + character.getId()
                     + ". Error reading Character from database",
                 UserAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
@@ -450,8 +710,8 @@ public class UserAccountService
         if (characterEntity == null)
         {
             throw generateException(
-                EXCEPTION_PRIMER_MAINTAINER_CREATE_FOR_CHARACTER
-                    + character.getId() + ". Character not found",
+                EXCEPTION_MAINTAINER_CREATE_FOR_CHARACTER + character.getId()
+                    + ". Character not found",
                 UserAccountServiceException.Codes.CHARACTER_NOT_FOUND);
         }
 
@@ -465,8 +725,7 @@ public class UserAccountService
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_PRIMER_MAINTAINER_CREATE_FOR_CHARACTER
-                    + character.getId()
+                EXCEPTION_MAINTAINER_CREATE_FOR_CHARACTER + character.getId()
                     + ". Error reading Instance from database",
                 UserAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
@@ -474,8 +733,8 @@ public class UserAccountService
         if (instanceEntity == null)
         {
             throw generateException(
-                EXCEPTION_PRIMER_MAINTAINER_CREATE_FOR_CHARACTER
-                    + character.getId() + ". Invalid instance object",
+                EXCEPTION_MAINTAINER_CREATE_FOR_CHARACTER + character.getId()
+                    + ". Invalid instance object",
                 UserAccountServiceException.Codes.INVALID_INSTANCE_OBJECT);
         }
 
@@ -497,8 +756,8 @@ public class UserAccountService
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_PRIMER_MAINTAINER_CREATE_FOR_CHARACTER
-                    + character.getId() + ". Error writing to database",
+                EXCEPTION_MAINTAINER_CREATE_FOR_CHARACTER + character.getId()
+                    + ". Error writing to database",
                 UserAccountServiceException.Codes.DATABASE_ERROR_WRITE, ex);
         }
 
@@ -525,7 +784,7 @@ public class UserAccountService
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_PRIMER_MAINTAINER_MODEL + character.getId()
+                EXCEPTION_MAINTAINER_MODEL + character.getId()
                     + ". Error reading from database",
                 UserAccountServiceException.Codes.DATABASE_ERROR_READ_MAPPING,
                 ex);
@@ -558,8 +817,7 @@ public class UserAccountService
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_PRIMER_MAINTAINER_REGISTER
-                    + transientMaintainer.getId()
+                EXCEPTION_MAINTAINER_REGISTER + transientMaintainer.getId()
                     + ". Error reading Instance from database",
                 UserAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
@@ -567,8 +825,8 @@ public class UserAccountService
         if (instanceEntity == null)
         {
             throw generateException(
-                EXCEPTION_PRIMER_MAINTAINER_REGISTER
-                    + transientMaintainer.getId() + ". Invalid Instance object",
+                EXCEPTION_MAINTAINER_REGISTER + transientMaintainer.getId()
+                    + ". Invalid Instance object",
                 UserAccountServiceException.Codes.INVALID_INSTANCE_OBJECT);
         }
 
@@ -576,8 +834,8 @@ public class UserAccountService
         if (!StringUtils.hasText(username))
         {
             throw generateException(
-                EXCEPTION_PRIMER_MAINTAINER_REGISTER
-                    + transientMaintainer.getId() + ". Invalid username",
+                EXCEPTION_MAINTAINER_REGISTER + transientMaintainer.getId()
+                    + ". Invalid username",
                 UserAccountServiceException.Codes.INVALID_USERNAME);
         }
 
@@ -585,8 +843,8 @@ public class UserAccountService
         if (!StringUtils.hasText(password))
         {
             throw generateException(
-                EXCEPTION_PRIMER_MAINTAINER_REGISTER
-                    + transientMaintainer.getId() + ". Invalid password",
+                EXCEPTION_MAINTAINER_REGISTER + transientMaintainer.getId()
+                    + ". Invalid password",
                 UserAccountServiceException.Codes.INVALID_PASSWORD);
         }
 
@@ -609,8 +867,9 @@ public class UserAccountService
         }
         catch (Exception ex)
         {
-            throw generateException(EXCEPTION_PRIMER_MAINTAINER_REGISTER
-                + transientMaintainer.getId() + ". Error reading from database",
+            throw generateException(
+                EXCEPTION_MAINTAINER_REGISTER + transientMaintainer.getId()
+                    + ". Error reading from database",
                 UserAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
 
@@ -618,16 +877,16 @@ public class UserAccountService
         if (accountEntity == null)
         {
             throw generateException(
-                EXCEPTION_PRIMER_MAINTAINER_REGISTER
-                    + transientMaintainer.getId() + ". User account not found",
+                EXCEPTION_MAINTAINER_REGISTER + transientMaintainer.getId()
+                    + ". User account not found",
                 UserAccountServiceException.Codes.ACCOUNT_NOT_FOUND);
         }
 
         if (accountEntity.getRole() != UserAccountRoles.USER_ROLE_TRANSIENT)
         {
             throw generateException(
-                EXCEPTION_PRIMER_MAINTAINER_REGISTER
-                    + transientMaintainer.getId() + ". Invalid role",
+                EXCEPTION_MAINTAINER_REGISTER + transientMaintainer.getId()
+                    + ". Invalid role",
                 UserAccountServiceException.Codes.INVALID_ROLE);
         }
 
@@ -646,8 +905,9 @@ public class UserAccountService
         }
         catch (Exception ex)
         {
-            throw generateException(EXCEPTION_PRIMER_MAINTAINER_REGISTER
-                + transientMaintainer.getId() + ". Error writing to database",
+            throw generateException(
+                EXCEPTION_MAINTAINER_REGISTER + transientMaintainer.getId()
+                    + ". Error writing to database",
                 UserAccountServiceException.Codes.DATABASE_ERROR_WRITE, ex);
         }
 
@@ -664,7 +924,7 @@ public class UserAccountService
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_PRIMER_MAINTAINER_MODEL + transientMaintainer.getId()
+                EXCEPTION_MAINTAINER_MODEL + transientMaintainer.getId()
                     + ". Error reading from database",
                 UserAccountServiceException.Codes.DATABASE_ERROR_READ_MAPPING,
                 ex);
@@ -672,7 +932,7 @@ public class UserAccountService
     }
 
     @Transactional
-    public MaintainerDto retrieveMaintainer(Long maintainerId)
+    public MaintainerDto retrieveMaintainer(Long userId)
         throws UserAccountServiceException
     {
         UserAccount accountEntity;
@@ -680,12 +940,12 @@ public class UserAccountService
         // Attempt to read from the database.
         try
         {
-            accountEntity = getUserAccountEntity(maintainerId);
+            accountEntity = getUserAccountEntity(userId);
         }
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_PRIMER_MAINTAINER_RETRIEVE_BY_ID + maintainerId
+                EXCEPTION_MAINTAINER_RETRIEVE + userId
                     + ". Error reading from database",
                 UserAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
@@ -694,7 +954,7 @@ public class UserAccountService
         if (accountEntity == null)
         {
             throw generateException(
-                EXCEPTION_PRIMER_MAINTAINER_RETRIEVE_BY_ID + maintainerId
+                EXCEPTION_MAINTAINER_RETRIEVE + userId
                     + ". User account not found",
                 UserAccountServiceException.Codes.ACCOUNT_NOT_FOUND);
         }
@@ -703,8 +963,7 @@ public class UserAccountService
         if (accountEntity.getRole() != UserAccountRoles.USER_ROLE_ADMIN)
         {
             throw generateException(
-                EXCEPTION_PRIMER_MAINTAINER_RETRIEVE_BY_ID + maintainerId
-                    + ". Invalid role",
+                EXCEPTION_MAINTAINER_RETRIEVE + userId + ". Invalid role",
                 UserAccountServiceException.Codes.INVALID_ROLE);
         }
 
@@ -720,11 +979,147 @@ public class UserAccountService
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_PRIMER_MAINTAINER_MODEL + accountEntity.getId()
+                EXCEPTION_MAINTAINER_MODEL + accountEntity.getId()
                     + ". Error reading from database",
                 UserAccountServiceException.Codes.DATABASE_ERROR_READ_MAPPING,
                 ex);
         }
+    }
+
+    @Transactional
+    public MaintainerDto updateMaintainer(MaintainerDto maintainer)
+        throws UserAccountServiceException
+    {
+        if (maintainer == null)
+        {
+            throw generateException(
+                "Attempted update of a null Maintainer account",
+                UserAccountServiceException.Codes.NULL_ACCOUNT_OBJECT);
+        }
+
+        UserAccount accountEntity;
+
+        // Attempt to read from the database.
+        try
+        {
+            accountEntity = getUserAccountEntity(maintainer.getId());
+        }
+        catch (Exception ex)
+        {
+            throw generateException(
+                EXCEPTION_MAINTAINER_UPDATE + maintainer.getId()
+                    + ". Error reading from database",
+                UserAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
+        }
+
+        // Check if the account exists.
+        if (accountEntity == null)
+        {
+            throw generateException(
+                EXCEPTION_MAINTAINER_UPDATE + maintainer.getId()
+                    + ". User account not found",
+                UserAccountServiceException.Codes.ACCOUNT_NOT_FOUND);
+        }
+
+        // Check if the account is in the correct role.
+        if (accountEntity.getRole() != UserAccountRoles.USER_ROLE_MAINTAINER)
+        {
+            throw generateException(
+                EXCEPTION_MAINTAINER_UPDATE + maintainer.getId()
+                    + ". Invalid role",
+                UserAccountServiceException.Codes.INVALID_ROLE);
+        }
+
+        // Attempt to modify and save user account.
+        accountEntity.setUsername(maintainer.getUsername());
+        accountEntity.setEmail(maintainer.getEmail());
+        accountEntity.setDisplayname(maintainer.getDisplayname());
+
+        try
+        {
+            accountEntity = userAccountRepository.save(accountEntity);
+        }
+        catch (Exception ex)
+        {
+            throw generateException(
+                EXCEPTION_MAINTAINER_UPDATE + maintainer.getId()
+                    + ". Error writing to database",
+                UserAccountServiceException.Codes.DATABASE_ERROR_WRITE, ex);
+        }
+
+        log.info("Updated Maintainer account with id: {}", maintainer.getId());
+
+        try
+        {
+            Hibernate.initialize(accountEntity.getCharacters());
+
+            return getMaintainerDto(accountEntity);
+        }
+        catch (Exception ex)
+        {
+            throw generateException(
+                EXCEPTION_MAINTAINER_MODEL + accountEntity.getId()
+                    + ". Error reading from database",
+                UserAccountServiceException.Codes.DATABASE_ERROR_READ_MAPPING,
+                ex);
+        }
+    }
+
+    @Transactional
+    public void deleteMaintainer(Long userId) throws UserAccountServiceException
+    {
+        UserAccount accountEntity;
+
+        // Attempt to read from the database.
+        try
+        {
+            accountEntity = getUserAccountEntity(userId);
+        }
+        catch (Exception ex)
+        {
+            throw generateException(
+                EXCEPTION_MAINTAINER_DELETE + userId
+                    + ". Error reading from database",
+                UserAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
+        }
+
+        // Check if the account exists.
+        if (accountEntity == null)
+        {
+            throw generateException(
+                EXCEPTION_MAINTAINER_DELETE + userId
+                    + ". User account not found",
+                UserAccountServiceException.Codes.ACCOUNT_NOT_FOUND);
+        }
+
+        // Check if the account is in the correct role.
+        if (accountEntity.getRole() != UserAccountRoles.USER_ROLE_MAINTAINER
+            || accountEntity.getRole() != UserAccountRoles.USER_ROLE_TRANSIENT)
+        {
+            throw generateException(
+                EXCEPTION_MAINTAINER_DELETE + userId + ". Invalid role",
+                UserAccountServiceException.Codes.INVALID_ROLE);
+        }
+
+        // TODO: Unassign all associated Characters.
+
+        // Attempt to soft-delete user account.
+        accountEntity.setDeleted(true);
+        accountEntity.setDeleteDate(LocalDateTime.now());
+
+        try
+        {
+            accountEntity = userAccountRepository.save(accountEntity);
+        }
+        catch (Exception ex)
+        {
+            throw generateException(
+                EXCEPTION_MAINTAINER_DELETE + userId
+                    + ". Error writing to database",
+                UserAccountServiceException.Codes.DATABASE_ERROR_WRITE, ex);
+        }
+
+        log.info("Deleted Maintainer account with id: {}", userId);
     }
 
     // -----------------------------------------------------------------------------------------------------------------

@@ -47,10 +47,12 @@ public class CharacterService
 
     private final String DEFAULT_CHARACTER_NAME = "New Character";
 
-    private final String EXCEPTION_PRIMER_CHARACTER_CREATE = "Cannot create Character for Instance id: ";
-    private final String EXCEPTION_PRIMER_CHARACTER_RETRIEVE_BY_ID = "Cannot retrieve Character with id: ";
+    private final String EXCEPTION_CHARACTER_CREATE = "Cannot create Character for Instance id: ";
+    private final String EXCEPTION_CHARACTER_RETRIEVE = "Cannot retrieve Character with id: ";
+    private final String EXCEPTION_CHARACTER_UPDATE = "Cannot update Character with id: ";
+    private final String EXCEPTION_CHARACTER_DELETE = "Cannot delete Character with id: ";
 
-    private final String EXCEPTION_PRIMER_CHARACTER_MODEL = "Cannot return model for Character with id: ";
+    private final String EXCEPTION_CHARACTER_MODEL = "Cannot return model for Character with id: ";
 
     @Transactional
     public CharacterDto createCharacter(InstanceDto instance,
@@ -85,7 +87,7 @@ public class CharacterService
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_PRIMER_CHARACTER_CREATE + instance.getId()
+                EXCEPTION_CHARACTER_CREATE + instance.getId()
                     + ". Error reading Instance from database",
                 CharacterServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
@@ -93,7 +95,7 @@ public class CharacterService
         if (instanceEntity == null)
         {
             throw generateException(
-                EXCEPTION_PRIMER_CHARACTER_CREATE + instance.getId()
+                EXCEPTION_CHARACTER_CREATE + instance.getId()
                     + ". Instance not found",
                 CharacterServiceException.Codes.INSTANCE_NOT_FOUND);
         }
@@ -101,7 +103,7 @@ public class CharacterService
         if (!instanceEntity.getActive())
         {
             throw generateException(
-                EXCEPTION_PRIMER_CHARACTER_CREATE + instance.getId()
+                EXCEPTION_CHARACTER_CREATE + instance.getId()
                     + ". Instance is inactive",
                 CharacterServiceException.Codes.INSTANCE_INACTIVE);
         }
@@ -116,7 +118,7 @@ public class CharacterService
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_PRIMER_CHARACTER_CREATE + instance.getId()
+                EXCEPTION_CHARACTER_CREATE + instance.getId()
                     + ". Error reading creator User Account with id: "
                     + creator.getId() + " from database",
                 CharacterServiceException.Codes.DATABASE_ERROR_READ, ex);
@@ -125,7 +127,7 @@ public class CharacterService
         if (creatorEntity == null)
         {
             throw generateException(
-                EXCEPTION_PRIMER_CHARACTER_CREATE + instance.getId()
+                EXCEPTION_CHARACTER_CREATE + instance.getId()
                     + ". Creator User Account with id: " + creator.getId()
                     + " not found",
                 CharacterServiceException.Codes.CREATOR_NOT_FOUND);
@@ -134,7 +136,7 @@ public class CharacterService
         if (creatorEntity.getRole() == UserAccountRoles.USER_ROLE_TRANSIENT)
         {
             throw generateException(
-                EXCEPTION_PRIMER_CHARACTER_CREATE + instance.getId()
+                EXCEPTION_CHARACTER_CREATE + instance.getId()
                     + ". Creator User Account with id: " + creator.getId()
                     + " is transient",
                 CharacterServiceException.Codes.INVALID_CREATOR_ROLE);
@@ -147,7 +149,7 @@ public class CharacterService
                 && creatorEntity.getParentInstance() != instanceEntity))
         {
             throw generateException(
-                EXCEPTION_PRIMER_CHARACTER_CREATE + instance.getId()
+                EXCEPTION_CHARACTER_CREATE + instance.getId()
                     + ". Creator User Account with id: " + creator.getId()
                     + " should not see Instance",
                 CharacterServiceException.Codes.INVALID_CREATOR_OBJECT);
@@ -175,7 +177,7 @@ public class CharacterService
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_PRIMER_CHARACTER_CREATE + instance.getId()
+                EXCEPTION_CHARACTER_CREATE + instance.getId()
                     + ". Error writing to database",
                 CharacterServiceException.Codes.DATABASE_ERROR_WRITE, ex);
         }
@@ -200,7 +202,7 @@ public class CharacterService
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_PRIMER_CHARACTER_MODEL + characterEntity.getId()
+                EXCEPTION_CHARACTER_MODEL + characterEntity.getId()
                     + ". Error reading from database",
                 CharacterServiceException.Codes.DATABASE_ERROR_READ_MAPPING,
                 ex);
@@ -221,21 +223,21 @@ public class CharacterService
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_PRIMER_CHARACTER_RETRIEVE_BY_ID + characterId
+                EXCEPTION_CHARACTER_RETRIEVE + characterId
                     + ". Error reading from database",
                 CharacterServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
 
-        // Check if the account exists.
+        // Check if the character exists.
         if (characterEntity == null)
         {
             throw generateException(
-                EXCEPTION_PRIMER_CHARACTER_RETRIEVE_BY_ID + characterId
-                    + ". Instance not found",
+                EXCEPTION_CHARACTER_RETRIEVE + characterId
+                    + ". Character not found",
                 CharacterServiceException.Codes.CHARACTER_NOT_FOUND);
         }
 
-        log.info("Found Character with id: {}", characterEntity.getId());
+        log.info("Found Character with id: {}", characterId);
 
         // Return a full DTO.
         try
@@ -245,11 +247,131 @@ public class CharacterService
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_PRIMER_CHARACTER_MODEL + characterEntity.getId()
+                EXCEPTION_CHARACTER_MODEL + characterId
                     + ". Error reading from database",
                 CharacterServiceException.Codes.DATABASE_ERROR_READ_MAPPING,
                 ex);
         }
+    }
+
+    @Transactional
+    public CharacterDto updateCharacter(CharacterDto character)
+        throws CharacterServiceException
+    {
+        if (character == null)
+        {
+            throw generateException(
+                "Attempted update of a null Character object",
+                CharacterServiceException.Codes.NULL_CHARACTER_OBJECT);
+        }
+
+        log.info("Attempting to update Instance id: {}", character.getId());
+
+        Character characterEntity;
+
+        // Attempt to read from the database.
+        try
+        {
+            characterEntity = getCharacterEntity(character);
+        }
+        catch (Exception ex)
+        {
+            throw generateException(
+                EXCEPTION_CHARACTER_UPDATE + character.getId()
+                    + ". Error reading from database",
+                CharacterServiceException.Codes.DATABASE_ERROR_READ, ex);
+        }
+
+        // Check if the account exists.
+        if (characterEntity == null)
+        {
+            throw generateException(
+                EXCEPTION_CHARACTER_UPDATE + character.getId()
+                    + ". Character not found",
+                CharacterServiceException.Codes.CHARACTER_NOT_FOUND);
+        }
+
+        // Attempt to modify and save character.
+        characterEntity.setName(character.getName());
+        characterEntity.setDescription(character.getDescription());
+        characterEntity.setColorPrimary(character.getColorPrimary());
+        characterEntity.setColorSecondary(character.getColorSecondary());
+
+        try
+        {
+            characterEntity = characterRepository.save(characterEntity);
+        }
+        catch (Exception ex)
+        {
+            throw generateException(
+                EXCEPTION_CHARACTER_UPDATE + character.getId()
+                    + ". Error writing to database",
+                CharacterServiceException.Codes.DATABASE_ERROR_WRITE, ex);
+        }
+
+        log.info("Updated Character with id: {}", character.getId());
+
+        try
+        {
+            return getCharacterDto(characterEntity);
+        }
+        catch (Exception ex)
+        {
+            throw generateException(
+                EXCEPTION_CHARACTER_MODEL + character.getId()
+                    + ". Error reading from database",
+                CharacterServiceException.Codes.DATABASE_ERROR_READ_MAPPING,
+                ex);
+        }
+    }
+
+    @Transactional
+    public void deleteCharacter(Long characterId)
+        throws CharacterServiceException
+    {
+        log.info("Attempting to delete Character with id: {}", characterId);
+
+        Character characterEntity;
+
+        // Attempt to read from the database.
+        try
+        {
+            characterEntity = getCharacterEntity(characterId);
+        }
+        catch (Exception ex)
+        {
+            throw generateException(
+                EXCEPTION_CHARACTER_DELETE + characterId
+                    + ". Error reading from database",
+                CharacterServiceException.Codes.DATABASE_ERROR_READ, ex);
+        }
+
+        // Check if the account exists.
+        if (characterEntity == null)
+        {
+            throw generateException(
+                EXCEPTION_CHARACTER_DELETE + characterId
+                    + ". Character not found",
+                CharacterServiceException.Codes.CHARACTER_NOT_FOUND);
+        }
+
+        // Attempt to soft-delete character.
+        characterEntity.setDeleted(true);
+        characterEntity.setDeleteDate(LocalDateTime.now());
+
+        try
+        {
+            characterEntity = characterRepository.save(characterEntity);
+        }
+        catch (Exception ex)
+        {
+            throw generateException(
+                EXCEPTION_CHARACTER_DELETE + characterId
+                    + ". Error writing to database",
+                CharacterServiceException.Codes.DATABASE_ERROR_WRITE, ex);
+        }
+
+        log.info("Deleted Character with id: {}", characterId);
     }
 
     // -----------------------------------------------------------------------------------------------------------------
@@ -258,10 +380,12 @@ public class CharacterService
 
     private final String DEFAULT_GROUP_NAME = "New Group";
 
-    private final String EXCEPTION_PRIMER_GROUP_CREATE = "Cannot create Character Group for Instance id: ";
-    private final String EXCEPTION_PRIMER_GROUP_RETRIEVE_BY_ID = "Cannot retrieve Character Group with id: ";
+    private final String EXCEPTION_GROUP_CREATE = "Cannot create Character Group for Instance id: ";
+    private final String EXCEPTION_GROUP_RETRIEVE = "Cannot retrieve Character Group with id: ";
+    private final String EXCEPTION_GROUP_UPDATE = "Cannot update Character Group with id: ";
+    private final String EXCEPTION_GROUP_DELETE = "Cannot delete Character Group with id: ";
 
-    private final String EXCEPTION_PRIMER_GROUP_MODEL = "Cannot return model for Character Group with id: ";
+    private final String EXCEPTION_GROUP_MODEL = "Cannot return model for Character Group with id: ";
 
     @Transactional
     public CharacterGroupDto createCharacterGroup(InstanceDto instance)
@@ -287,7 +411,7 @@ public class CharacterService
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_PRIMER_GROUP_CREATE + instance.getId()
+                EXCEPTION_GROUP_CREATE + instance.getId()
                     + ". Error reading from database",
                 CharacterServiceException.Codes.INVALID_INSTANCE_OBJECT, ex);
         }
@@ -295,7 +419,7 @@ public class CharacterService
         if (instanceEntity == null)
         {
             throw generateException(
-                EXCEPTION_PRIMER_GROUP_CREATE + instance.getId()
+                EXCEPTION_GROUP_CREATE + instance.getId()
                     + ". Instance not found",
                 CharacterServiceException.Codes.INSTANCE_NOT_FOUND);
         }
@@ -303,7 +427,7 @@ public class CharacterService
         if (!instanceEntity.getActive())
         {
             throw generateException(
-                EXCEPTION_PRIMER_GROUP_CREATE + instance.getId()
+                EXCEPTION_GROUP_CREATE + instance.getId()
                     + ". Instance is inactive",
                 CharacterServiceException.Codes.INSTANCE_INACTIVE);
         }
@@ -324,7 +448,7 @@ public class CharacterService
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_PRIMER_GROUP_CREATE + instance.getId()
+                EXCEPTION_GROUP_CREATE + instance.getId()
                     + ". Error writing to database",
                 CharacterServiceException.Codes.DATABASE_ERROR_WRITE, ex);
         }
@@ -350,7 +474,7 @@ public class CharacterService
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_PRIMER_GROUP_MODEL + characterGroupEntity.getId()
+                EXCEPTION_GROUP_MODEL + characterGroupEntity.getId()
                     + ". Error reading from database",
                 CharacterServiceException.Codes.DATABASE_ERROR_READ_MAPPING,
                 ex);
@@ -371,16 +495,16 @@ public class CharacterService
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_PRIMER_GROUP_RETRIEVE_BY_ID + characterGroupId
+                EXCEPTION_GROUP_RETRIEVE + characterGroupId
                     + ". Error reading from database",
                 CharacterServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
 
-        // Check if the account exists.
+        // Check if the group exists.
         if (characterGroupEntity == null)
         {
             throw generateException(
-                EXCEPTION_PRIMER_GROUP_RETRIEVE_BY_ID + characterGroupId
+                EXCEPTION_GROUP_RETRIEVE + characterGroupId
                     + ". Character Group not found",
                 CharacterServiceException.Codes.CHARACTER_GROUP_NOT_FOUND);
         }
@@ -396,11 +520,131 @@ public class CharacterService
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_PRIMER_GROUP_MODEL + characterGroupEntity.getId()
+                EXCEPTION_GROUP_MODEL + characterGroupEntity.getId()
                     + ". Error reading from database",
                 CharacterServiceException.Codes.DATABASE_ERROR_READ_MAPPING,
                 ex);
         }
+    }
+
+    @Transactional
+    public CharacterGroupDto updateCharacterGroup(
+        CharacterGroupDto characterGroup) throws CharacterServiceException
+    {
+        if (characterGroup == null)
+        {
+            throw generateException(
+                "Attempted update of a null Character Group object",
+                CharacterServiceException.Codes.NULL_CHARACTER_GROUP_OBJECT);
+        }
+
+        CharacterGroup characterGroupEntity;
+
+        // Attempt to read from the database.
+        try
+        {
+            characterGroupEntity = getCharacterGroupEntity(
+                characterGroup.getId());
+        }
+        catch (Exception ex)
+        {
+            throw generateException(
+                EXCEPTION_GROUP_UPDATE + characterGroup.getId()
+                    + ". Error reading from database",
+                CharacterServiceException.Codes.DATABASE_ERROR_READ, ex);
+        }
+
+        // Check if the group exists.
+        if (characterGroupEntity == null)
+        {
+            throw generateException(
+                EXCEPTION_GROUP_UPDATE + characterGroup.getId()
+                    + ". Character Group not found",
+                CharacterServiceException.Codes.CHARACTER_GROUP_NOT_FOUND);
+        }
+
+        // Attempt to modify and save group.
+        characterGroupEntity.setName(characterGroup.getName());
+        characterGroupEntity.setDescription(characterGroup.getDescription());
+        characterGroupEntity.setColorPrimary(characterGroup.getColorPrimary());
+
+        try
+        {
+            characterGroupEntity = characterGroupRepository
+                .save(characterGroupEntity);
+        }
+        catch (Exception ex)
+        {
+            throw generateException(
+                EXCEPTION_GROUP_UPDATE + characterGroup.getId()
+                    + ". Error writing to database",
+                CharacterServiceException.Codes.DATABASE_ERROR_WRITE, ex);
+        }
+
+        log.info("Updated Character Group with id: {}", characterGroup.getId());
+
+        try
+        {
+            return getCharacterGroupDto(characterGroupEntity);
+        }
+        catch (Exception ex)
+        {
+            throw generateException(
+                EXCEPTION_GROUP_MODEL + characterGroupEntity.getId()
+                    + ". Error reading from database",
+                CharacterServiceException.Codes.DATABASE_ERROR_READ_MAPPING,
+                ex);
+        }
+    }
+
+    @Transactional
+    public void deleteCharacterGroup(Long characterGroupId)
+        throws CharacterServiceException
+    {
+        CharacterGroup characterGroupEntity;
+
+        // Attempt to read from the database.
+        try
+        {
+            characterGroupEntity = getCharacterGroupEntity(characterGroupId);
+        }
+        catch (Exception ex)
+        {
+            throw generateException(
+                EXCEPTION_GROUP_DELETE + characterGroupId
+                    + ". Error reading from database",
+                CharacterServiceException.Codes.DATABASE_ERROR_READ, ex);
+        }
+
+        // Check if the group exists.
+        if (characterGroupEntity == null)
+        {
+            throw generateException(
+                EXCEPTION_GROUP_DELETE + characterGroupId
+                    + ". Character Group not found",
+                CharacterServiceException.Codes.CHARACTER_GROUP_NOT_FOUND);
+        }
+
+        // TODO: Move all characters in this group to the instance's root group.
+
+        // Attempt to soft-delete group.
+        characterGroupEntity.setDeleted(true);
+        characterGroupEntity.setDeleteDate(LocalDateTime.now());
+
+        try
+        {
+            characterGroupEntity = characterGroupRepository
+                .save(characterGroupEntity);
+        }
+        catch (Exception ex)
+        {
+            throw generateException(
+                EXCEPTION_GROUP_DELETE + characterGroupId
+                    + ". Error writing to database",
+                CharacterServiceException.Codes.DATABASE_ERROR_WRITE, ex);
+        }
+
+        log.info("Deleted Character Group with id: {}", characterGroupId);
     }
 
     // -----------------------------------------------------------------------------------------------------------------
