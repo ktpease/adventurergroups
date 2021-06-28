@@ -309,7 +309,7 @@ class UserAccountServiceTests
 		assertEquals(exception.getCode(),
 			UserAccountServiceException.Codes.ACCOUNT_ALREADY_EXISTS);
 
-		// Fail to register maintainer with the same username as another
+		// Fail to register maintainer with the same username as instance
 		// owner.
 		exception = assertThrows(UserAccountServiceException.class,
 			() -> userAccountService.registerMaintainer(
@@ -319,35 +319,12 @@ class UserAccountServiceTests
 		assertEquals(exception.getCode(),
 			UserAccountServiceException.Codes.ACCOUNT_ALREADY_EXISTS);
 
-		// Fail to register maintainer with the same email as another owner.
+		// Fail to register maintainer with the same email as instance owner.
 		exception = assertThrows(UserAccountServiceException.class,
 			() -> userAccountService.registerMaintainer(
 				testTransientMaintainer2, "testmaintainer2", "testpassword",
 				"testowneremail", null),
 			"Should not register Maintainer with same non-null email as Test Owner");
-		assertEquals(exception.getCode(),
-			UserAccountServiceException.Codes.ACCOUNT_ALREADY_EXISTS);
-
-		// Create admin for fail conditions.
-		userAccountService.createAdmin("testadmin", "testpassword",
-			"testadminemail", null);
-
-		// Fail to register maintainer with the same username as another
-		// admin.
-		exception = assertThrows(UserAccountServiceException.class,
-			() -> userAccountService.registerMaintainer(
-				testTransientMaintainer2, "testadmin", "testpassword", null,
-				null),
-			"Should not register Maintainer with same username as Test Admin");
-		assertEquals(exception.getCode(),
-			UserAccountServiceException.Codes.ACCOUNT_ALREADY_EXISTS);
-
-		// Fail to register maintainer with the same email as another admin.
-		exception = assertThrows(UserAccountServiceException.class,
-			() -> userAccountService.registerMaintainer(
-				testTransientMaintainer2, "testmaintainer2", "testpassword",
-				"testadminemail", null),
-			"Should not register Maintainer with same non-null email as Test Admin");
 		assertEquals(exception.getCode(),
 			UserAccountServiceException.Codes.ACCOUNT_ALREADY_EXISTS);
 	}

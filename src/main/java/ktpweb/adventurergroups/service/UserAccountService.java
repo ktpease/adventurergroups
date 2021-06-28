@@ -850,10 +850,24 @@ public class UserAccountService
 
         // Check to see if an account with the same username and password
         // exists.
+
+        // Check for Owner.
+        UserAccount instanceOwnerEntity = instanceEntity.getOwner();
+        if (instanceOwnerEntity.getUsername().equalsIgnoreCase(username)
+            || (StringUtils.hasText(email)
+                && instanceOwnerEntity.getEmail().equalsIgnoreCase(email)))
+        {
+            throw generateException(
+                "Owner account with the same username or non-null email already exists! Username = "
+                    + username + ", email = " + email,
+                UserAccountServiceException.Codes.ACCOUNT_ALREADY_EXISTS);
+        }
+
+        // Check for other maintainers.
         if (accountExistsInInstance(username, email, instanceEntity))
         {
             throw generateException(
-                "Account with the same username or non-null email already exists! Username = "
+                "Maintainer account with the same username or non-null email already exists! Username = "
                     + username + ", email = " + email,
                 UserAccountServiceException.Codes.ACCOUNT_ALREADY_EXISTS);
         }
@@ -896,7 +910,7 @@ public class UserAccountService
         accountEntity.setEmail(email);
         accountEntity.setDisplayname(
             StringUtils.hasText(displayname) ? displayname : username);
-        accountEntity.setRole(UserAccountRoles.USER_ROLE_OWNER);
+        accountEntity.setRole(UserAccountRoles.USER_ROLE_MAINTAINER);
         accountEntity.setCreateDate(LocalDateTime.now());
 
         try
@@ -960,14 +974,15 @@ public class UserAccountService
         }
 
         // Check if the account is in the correct role.
-        if (accountEntity.getRole() != UserAccountRoles.USER_ROLE_ADMIN)
+        if (accountEntity.getRole() != UserAccountRoles.USER_ROLE_MAINTAINER
+            && accountEntity.getRole() != UserAccountRoles.USER_ROLE_TRANSIENT)
         {
             throw generateException(
                 EXCEPTION_MAINTAINER_RETRIEVE + userId + ". Invalid role",
                 UserAccountServiceException.Codes.INVALID_ROLE);
         }
 
-        log.info("Found Admin account with id: {}", accountEntity.getId());
+        log.info("Found Maintainer account with id: {}", accountEntity.getId());
 
         // Prepare collection objects and return a full DTO.
         try
@@ -1154,27 +1169,45 @@ public class UserAccountService
             "Searching for existance of Global user account with username: {} and/or email: {}",
             username, email);
 
+        ExampleMatcher matcher = ExampleMatcher.matchingAll().withIgnoreCase();
+
         UserAccount probe = new UserAccount();
         probe.setUsername(username);
         probe.setDeleted(false);
 
-        if (StringUtils.hasText(email))
-            probe.setEmail(email);
+        Boolean check;
 
-        ExampleMatcher matcher = ExampleMatcher.matchingAny().withIgnoreCase()
-            .withIgnorePaths("role", "deleted");
-
-        // Check for Admins first.
+        // Check username for Admins first.
         probe.setRole(UserAccountRoles.USER_ROLE_ADMIN);
-        Boolean check = userAccountRepository
-            .exists(Example.of(probe, matcher));
+        check = userAccountRepository.exists(Example.of(probe, matcher));
 
         if (check)
             return true;
 
-        // Now check for Owners.
+        // Now check username for Owners.
         probe.setRole(UserAccountRoles.USER_ROLE_OWNER);
-        return userAccountRepository.exists(Example.of(probe, matcher));
+        check = userAccountRepository.exists(Example.of(probe, matcher));
+
+        if (check)
+            return true;
+
+        if (StringUtils.hasText(email))
+        {
+            probe.setUsername(null);
+            probe.setEmail(email);
+
+            // Now check email for Admins.
+            probe.setRole(UserAccountRoles.USER_ROLE_ADMIN);
+            check = userAccountRepository.exists(Example.of(probe, matcher));
+
+            if (check)
+                return true;
+
+            // Now check email for Owners.
+            probe.setRole(UserAccountRoles.USER_ROLE_OWNER);
+            check = userAccountRepository.exists(Example.of(probe, matcher));
+        }
+        return check;
     }
 
     private Boolean accountExistsInInstance(String username, String email,
@@ -1184,19 +1217,30 @@ public class UserAccountService
             "Searching for existance of Maintainer user account with username: {} and/or email: {} in instance id: {}",
             username, email, parentInstance.getId());
 
+        ExampleMatcher matcher = ExampleMatcher.matchingAll().withIgnoreCase();
+
         UserAccount probe = new UserAccount();
         probe.setUsername(username);
         probe.setParentInstance(parentInstance);
         probe.setRole(UserAccountRoles.USER_ROLE_MAINTAINER);
         probe.setDeleted(false);
 
+        Boolean check = userAccountRepository
+            .exists(Example.of(probe, matcher));
+
+        if (check)
+            return true;
+
         if (StringUtils.hasText(email))
+        {
+            probe.setUsername(null);
             probe.setEmail(email);
 
-        ExampleMatcher matcher = ExampleMatcher.matchingAny().withIgnoreCase()
-            .withIgnorePaths("role", "parentInstance", "deleted");
+            // Now check email.
+            return userAccountRepository.exists(Example.of(probe, matcher));
+        }
 
-        return userAccountRepository.exists(Example.of(probe, matcher));
+        return false;
     }
 
     // -----------------------------------------------------------------------------------------------------------------
