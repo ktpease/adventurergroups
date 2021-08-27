@@ -12,7 +12,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
 import ktpweb.adventurergroups.exception.UserAccountServiceException;
-import ktpweb.adventurergroups.model.AdminDto;
 import ktpweb.adventurergroups.model.CharacterDto;
 import ktpweb.adventurergroups.model.InstanceDto;
 import ktpweb.adventurergroups.model.MaintainerDto;
@@ -46,76 +45,6 @@ class UserAccountServiceTests
 		userAccountRepository.deleteAll();
 		instanceRepository.deleteAll();
 		characterRepository.deleteAll();
-	}
-
-	@Test
-	void createAdminTests() throws Exception
-	{
-		UserAccountServiceException exception;
-
-		// Create a new admin.
-		AdminDto testAdmin = userAccountService.createAdmin("testadmin",
-			"testpassword", "testemail", null);
-
-		assertNotNull(testAdmin.getId(),
-			"Cannot create Test Admin in database");
-		assertEquals(testAdmin.getUsername(), "testadmin",
-			"Test Admin does not have correct username");
-
-		assertDoesNotThrow(() -> userAccountService.createAdmin("testadmin2",
-			"testpassword", "testemail2", null),
-			"Cannot create separate admin");
-
-		// Fail to create an admin with an invalid username.
-		exception = assertThrows(
-			UserAccountServiceException.class, () -> userAccountService
-				.createAdmin("", "testpassword", null, null),
-			"Should not create second Test Admin with no username.");
-		assertEquals(exception.getCode(),
-			UserAccountServiceException.Codes.INVALID_USERNAME);
-
-		// Fail to create an admin with an invalid password.
-		exception = assertThrows(UserAccountServiceException.class,
-			() -> userAccountService.createAdmin("testadmin3", "", null, null),
-			"Should not create second Test Admin with bad password.");
-		assertEquals(exception.getCode(),
-			UserAccountServiceException.Codes.INVALID_PASSWORD);
-
-		// Fail to create a new admin with the same username as another admin.
-		exception = assertThrows(UserAccountServiceException.class,
-			() -> userAccountService.createAdmin("testadmin", "testpassword",
-				null, null),
-			"Should not create Admin with same username as Test Admin");
-		assertEquals(exception.getCode(),
-			UserAccountServiceException.Codes.ACCOUNT_ALREADY_EXISTS);
-
-		// Fail to create a new admin with the same email as another admin.
-		exception = assertThrows(UserAccountServiceException.class,
-			() -> userAccountService.createAdmin("testadmin3", "testpassword",
-				"testemail", null),
-			"Should not create Admin with same non-null email as Test Admin");
-		assertEquals(exception.getCode(),
-			UserAccountServiceException.Codes.ACCOUNT_ALREADY_EXISTS);
-
-		// Create owner for fail conditions.
-		userAccountService.createOwner("testowner", "testpassword",
-			"testowneremail", null);
-
-		// Fail to create a new admin with the same username as another owner.
-		exception = assertThrows(UserAccountServiceException.class,
-			() -> userAccountService.createAdmin("testowner", "testpassword",
-				null, null),
-			"Should not create Admin with same username as Test Owner");
-		assertEquals(exception.getCode(),
-			UserAccountServiceException.Codes.ACCOUNT_ALREADY_EXISTS);
-
-		// Fail to create a new admin with the same email as another owner.
-		exception = assertThrows(UserAccountServiceException.class,
-			() -> userAccountService.createAdmin("testadmin3", "testpassword",
-				"testowneremail", null),
-			"Should not create Admin with same non-null email as Test Owner");
-		assertEquals(exception.getCode(),
-			UserAccountServiceException.Codes.ACCOUNT_ALREADY_EXISTS);
 	}
 
 	@Test
@@ -163,27 +92,6 @@ class UserAccountServiceTests
 		exception = assertThrows(UserAccountServiceException.class,
 			() -> userAccountService.createOwner("testowner2", "testpassword",
 				"testemail", null),
-			"Should not create Owner with same non-null email as Test Owner");
-		assertEquals(exception.getCode(),
-			UserAccountServiceException.Codes.ACCOUNT_ALREADY_EXISTS);
-
-		// Create admin for fail conditions.
-		userAccountService.createAdmin("testadmin", "testpassword",
-			"testadminemail", null);
-
-		// Fail to create a new owner with the same username as another
-		// admin.
-		exception = assertThrows(UserAccountServiceException.class,
-			() -> userAccountService.createOwner("testadmin", "testpassword",
-				null, null),
-			"Should not create Owner with same username as Test Owner");
-		assertEquals(exception.getCode(),
-			UserAccountServiceException.Codes.ACCOUNT_ALREADY_EXISTS);
-
-		// Fail to create a new owner with the same email as another admin.
-		exception = assertThrows(UserAccountServiceException.class,
-			() -> userAccountService.createOwner("testowner2", "testpassword",
-				"testadminemail", null),
 			"Should not create Owner with same non-null email as Test Owner");
 		assertEquals(exception.getCode(),
 			UserAccountServiceException.Codes.ACCOUNT_ALREADY_EXISTS);

@@ -19,7 +19,6 @@ import ktpweb.adventurergroups.entity.Character;
 import ktpweb.adventurergroups.entity.Instance;
 import ktpweb.adventurergroups.entity.UserAccount;
 import ktpweb.adventurergroups.exception.UserAccountServiceException;
-import ktpweb.adventurergroups.model.AdminDto;
 import ktpweb.adventurergroups.model.CharacterDto;
 import ktpweb.adventurergroups.model.InstanceDto;
 import ktpweb.adventurergroups.model.MaintainerDto;
@@ -41,269 +40,6 @@ public class UserAccountService
 
     @Autowired
     private CharacterService characterService;
-
-    // -----------------------------------------------------------------------------------------------------------------
-    // Admin-related public methods.
-    // -----------------------------------------------------------------------------------------------------------------
-
-    private final String EXCEPTION_ADMIN_CREATE = "Cannot create Admin account with username: ";
-    private final String EXCEPTION_ADMIN_RETRIEVE = "Cannot retrieve Admin account with user id: ";
-    private final String EXCEPTION_ADMIN_UPDATE = "Cannot update Admin account with user id: ";
-    private final String EXCEPTION_ADMIN_DELETE = "Cannot delete Admin account with user id: ";
-
-    private final String EXCEPTION_ADMIN_MODEL = "Cannot return model for Admin account with user id: ";
-
-    @Transactional
-    public AdminDto createAdmin(String username, String password, String email,
-        String displayname) throws UserAccountServiceException
-    {
-        log.info("Attempting to create Admin account with username: {}",
-            username);
-
-        // Invalid username.
-        if (!StringUtils.hasText(username))
-        {
-            throw generateException(
-                EXCEPTION_ADMIN_CREATE + username + ". Invalid username",
-                UserAccountServiceException.Codes.INVALID_USERNAME);
-        }
-
-        // Invalid password.
-        if (!StringUtils.hasText(password))
-        {
-            throw generateException(
-                EXCEPTION_ADMIN_CREATE + username + ". Invalid password",
-                UserAccountServiceException.Codes.INVALID_PASSWORD);
-        }
-
-        // Check to see if an admin or owner with the same username and password
-        // exists.
-        if (accountExistsInGlobal(username, email))
-        {
-            throw generateException(
-                "Account with the same username or non-null email already exists! Username = "
-                    + username + ", email = " + email,
-                UserAccountServiceException.Codes.ACCOUNT_ALREADY_EXISTS);
-        }
-
-        // Generate database entity.
-        UserAccount accountEntity = new UserAccount();
-
-        accountEntity.setUsername(username);
-        accountEntity.setPassword(password);
-        accountEntity.setEmail(email);
-        accountEntity.setDisplayname(
-            StringUtils.hasText(displayname) ? displayname : username);
-        accountEntity.setRole(UserAccountRoles.USER_ROLE_ADMIN);
-        accountEntity.setCreateDate(LocalDateTime.now());
-
-        try
-        {
-            accountEntity = userAccountRepository.save(accountEntity);
-        }
-        catch (Exception ex)
-        {
-            throw generateException(
-                EXCEPTION_ADMIN_CREATE + username
-                    + ". Error writing to database",
-                UserAccountServiceException.Codes.DATABASE_ERROR_WRITE, ex);
-        }
-
-        log.info("Created Admin account with username: {}, id: {}", username,
-            accountEntity.getId());
-
-        try
-        {
-            return getAdminDto(accountEntity);
-        }
-        catch (Exception ex)
-        {
-            throw generateException(
-                EXCEPTION_ADMIN_MODEL + accountEntity.getId()
-                    + ". Error reading from database",
-                UserAccountServiceException.Codes.DATABASE_ERROR_READ_MAPPING,
-                ex);
-        }
-    }
-
-    @Transactional
-    public AdminDto retrieveAdmin(Long userId)
-        throws UserAccountServiceException
-    {
-        UserAccount accountEntity;
-
-        // Attempt to read from the database.
-        try
-        {
-            accountEntity = getUserAccountEntity(userId);
-        }
-        catch (Exception ex)
-        {
-            throw generateException(
-                EXCEPTION_ADMIN_RETRIEVE + userId
-                    + ". Error reading from database",
-                UserAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
-        }
-
-        // Check if the account exists.
-        if (accountEntity == null)
-        {
-            throw generateException(
-                EXCEPTION_ADMIN_RETRIEVE + userId + ". User account not found",
-                UserAccountServiceException.Codes.ACCOUNT_NOT_FOUND);
-        }
-
-        // Check if the account is in the correct role.
-        if (accountEntity.getRole() != UserAccountRoles.USER_ROLE_ADMIN)
-        {
-            throw generateException(
-                EXCEPTION_ADMIN_RETRIEVE + userId + ". Invalid role",
-                UserAccountServiceException.Codes.INVALID_ROLE);
-        }
-
-        log.info("Found Admin account with id: {}", accountEntity.getId());
-
-        // return a full DTO.
-        try
-        {
-            return getAdminDto(accountEntity);
-        }
-        catch (Exception ex)
-        {
-            throw generateException(
-                EXCEPTION_ADMIN_MODEL + accountEntity.getId()
-                    + ". Error reading from database",
-                UserAccountServiceException.Codes.DATABASE_ERROR_READ_MAPPING,
-                ex);
-        }
-    }
-
-    @Transactional
-    public AdminDto updateAdmin(AdminDto admin)
-        throws UserAccountServiceException
-    {
-        if (admin == null)
-        {
-            throw generateException("Attempted update of a null Admin account",
-                UserAccountServiceException.Codes.NULL_ACCOUNT_OBJECT);
-        }
-
-        UserAccount accountEntity;
-
-        // Attempt to read from the database.
-        try
-        {
-            accountEntity = getUserAccountEntity(admin.getId());
-        }
-        catch (Exception ex)
-        {
-            throw generateException(
-                EXCEPTION_ADMIN_UPDATE + admin.getId()
-                    + ". Error reading from database",
-                UserAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
-        }
-
-        // Check if the account exists.
-        if (accountEntity == null)
-        {
-            throw generateException(
-                EXCEPTION_ADMIN_UPDATE + admin.getId()
-                    + ". User account not found",
-                UserAccountServiceException.Codes.ACCOUNT_NOT_FOUND);
-        }
-
-        // Check if the account is in the correct role.
-        if (accountEntity.getRole() != UserAccountRoles.USER_ROLE_ADMIN)
-        {
-            throw generateException(
-                EXCEPTION_ADMIN_UPDATE + admin.getId() + ". Invalid role",
-                UserAccountServiceException.Codes.INVALID_ROLE);
-        }
-
-        // Attempt to modify and save user account.
-        accountEntity.setUsername(admin.getUsername());
-        accountEntity.setEmail(admin.getEmail());
-        accountEntity.setDisplayname(admin.getDisplayname());
-
-        try
-        {
-            accountEntity = userAccountRepository.save(accountEntity);
-        }
-        catch (Exception ex)
-        {
-            throw generateException(
-                EXCEPTION_ADMIN_UPDATE + admin.getId()
-                    + ". Error writing to database",
-                UserAccountServiceException.Codes.DATABASE_ERROR_WRITE, ex);
-        }
-
-        log.info("Updated Admin account with id: {}", admin.getId());
-
-        try
-        {
-            return getAdminDto(accountEntity);
-        }
-        catch (Exception ex)
-        {
-            throw generateException(
-                EXCEPTION_ADMIN_MODEL + accountEntity.getId()
-                    + ". Error reading from database",
-                UserAccountServiceException.Codes.DATABASE_ERROR_READ_MAPPING,
-                ex);
-        }
-    }
-
-    @Transactional
-    public void deleteAdmin(Long userId) throws UserAccountServiceException
-    {
-        UserAccount accountEntity;
-
-        // Attempt to read from the database.
-        try
-        {
-            accountEntity = getUserAccountEntity(userId);
-        }
-        catch (Exception ex)
-        {
-            throw generateException(
-                EXCEPTION_ADMIN_DELETE + userId
-                    + ". Error reading from database",
-                UserAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
-        }
-
-        // Check if the account exists.
-        if (accountEntity == null)
-        {
-            throw generateException(
-                EXCEPTION_ADMIN_DELETE + userId + ". User account not found",
-                UserAccountServiceException.Codes.ACCOUNT_NOT_FOUND);
-        }
-
-        // Check if the account is in the correct role.
-        if (accountEntity.getRole() != UserAccountRoles.USER_ROLE_ADMIN)
-        {
-            throw generateException(
-                EXCEPTION_ADMIN_DELETE + userId + ". Invalid role",
-                UserAccountServiceException.Codes.INVALID_ROLE);
-        }
-
-        // Attempt to soft-delete user account.
-        accountEntity.setDeleted(true);
-        accountEntity.setDeleteDate(LocalDateTime.now());
-
-        try
-        {
-            accountEntity = userAccountRepository.save(accountEntity);
-        }
-        catch (Exception ex)
-        {
-            throw generateException(
-                EXCEPTION_ADMIN_DELETE + userId + ". Error writing to database",
-                UserAccountServiceException.Codes.DATABASE_ERROR_WRITE, ex);
-        }
-
-        log.info("Deleted Admin account with id: {}", userId);
-    }
 
     // -----------------------------------------------------------------------------------------------------------------
     // Owner-related public methods.
@@ -339,9 +75,22 @@ public class UserAccountService
                 UserAccountServiceException.Codes.INVALID_PASSWORD);
         }
 
-        // Check to see if an admin or owner with the same username and password
-        // exists.
-        if (accountExistsInGlobal(username, email))
+        // Check to see if an owner with the same username and email exists.
+        Boolean accountExists;
+
+        try
+        {
+            accountExists = accountExistsInGlobal(username, email);
+        }
+        catch (Exception ex)
+        {
+            throw generateException(
+                EXCEPTION_OWNER_CREATE + username
+                    + ". Error checking for matching accounts from database",
+                UserAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
+        }
+
+        if (accountExists)
         {
             throw generateException(
                 "Account with the same username or non-null email already exists! Username = "
@@ -848,7 +597,7 @@ public class UserAccountService
                 UserAccountServiceException.Codes.INVALID_PASSWORD);
         }
 
-        // Check to see if an account with the same username and password
+        // Check to see if an account with the same username and email
         // exists.
 
         // Check for Owner.
@@ -864,7 +613,22 @@ public class UserAccountService
         }
 
         // Check for other maintainers.
-        if (accountExistsInInstance(username, email, instanceEntity))
+        Boolean accountExists;
+
+        try
+        {
+            accountExists = accountExistsInInstance(username, email,
+                instanceEntity);
+        }
+        catch (Exception ex)
+        {
+            throw generateException(
+                EXCEPTION_MAINTAINER_REGISTER + transientMaintainer.getId()
+                    + ". Error checking for matching accounts from database",
+                UserAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
+        }
+
+        if (accountExists)
         {
             throw generateException(
                 "Maintainer account with the same username or non-null email already exists! Username = "
@@ -1164,6 +928,7 @@ public class UserAccountService
     }
 
     private Boolean accountExistsInGlobal(String username, String email)
+        throws Exception
     {
         log.debug(
             "Searching for existance of Global user account with username: {} and/or email: {}",
@@ -1174,19 +939,10 @@ public class UserAccountService
         UserAccount probe = new UserAccount();
         probe.setUsername(username);
         probe.setDeleted(false);
-
-        Boolean check;
-
-        // Check username for Admins first.
-        probe.setRole(UserAccountRoles.USER_ROLE_ADMIN);
-        check = userAccountRepository.exists(Example.of(probe, matcher));
-
-        if (check)
-            return true;
-
-        // Now check username for Owners.
         probe.setRole(UserAccountRoles.USER_ROLE_OWNER);
-        check = userAccountRepository.exists(Example.of(probe, matcher));
+
+        Boolean check = userAccountRepository
+            .exists(Example.of(probe, matcher));
 
         if (check)
             return true;
@@ -1196,22 +952,14 @@ public class UserAccountService
             probe.setUsername(null);
             probe.setEmail(email);
 
-            // Now check email for Admins.
-            probe.setRole(UserAccountRoles.USER_ROLE_ADMIN);
-            check = userAccountRepository.exists(Example.of(probe, matcher));
-
-            if (check)
-                return true;
-
-            // Now check email for Owners.
-            probe.setRole(UserAccountRoles.USER_ROLE_OWNER);
             check = userAccountRepository.exists(Example.of(probe, matcher));
         }
+
         return check;
     }
 
     private Boolean accountExistsInInstance(String username, String email,
-        Instance parentInstance)
+        Instance parentInstance) throws Exception
     {
         log.debug(
             "Searching for existance of Maintainer user account with username: {} and/or email: {} in instance id: {}",
@@ -1246,19 +994,6 @@ public class UserAccountService
     // -----------------------------------------------------------------------------------------------------------------
     // DTO Mapping methods.
     // -----------------------------------------------------------------------------------------------------------------
-
-    protected AdminDto getAdminDto(UserAccount ua) throws Exception
-    {
-        AdminDto dto = new AdminDto();
-
-        dto.setId(ua.getId());
-        dto.setUsername(ua.getUsername());
-        dto.setEmail(ua.getEmail());
-        dto.setDisplayname(ua.getDisplayname());
-        dto.setCreateDate(ua.getCreateDate());
-
-        return dto;
-    }
 
     protected OwnerDto getOwnerDto(UserAccount ua) throws Exception
     {
