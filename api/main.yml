@@ -1,0 +1,679 @@
+openapi: '3.0.2'
+
+info:
+  title: Adventurer Groups API
+  version: '1.0'
+  description: API for the Adventurer Groups server.
+
+tags:
+- name: Owner
+  description: For the owner user accounts.
+- name: Instance
+  description: For each owner account's instances.
+- name: Maintainer
+  description: For each instance's maintainer user accounts.
+- name: Character
+  description: For each instance or maintainer's characters.
+
+paths:
+  /owners:
+    post:
+      tags:
+        - Owner
+      summary: Create a new owner account.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserAccountNew'
+      responses:
+        '201':
+          description: Successful creation of Owner
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OwnerFull'
+        '400' :
+          description: Invalid request data.
+        '422' :
+          description: Account with the username already exists
+        '500' :
+          description: Server error.
+
+  /owners/{ownerId}:
+    parameters:
+      - name: ownerId
+        in: path
+        description: Owner ID
+        required: true
+        schema:
+          type: string
+
+    get:
+      tags:
+        - Owner
+      summary: Retrieve the designated owner account.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OwnerFull'
+        '400':
+          description: Invalid URI.
+        '404':
+          description: Owner account not found.
+        '500':
+          description: Server error.
+    
+    patch:
+      tags:
+        - Owner
+      summary: Update the designated owner account.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserAccount'
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OwnerFull'
+        '400':
+          description: Invalid URI or request data.
+        '404':
+          description: Owner account not found.
+        '500':
+          description: Server error.
+
+    delete:
+      tags:
+        - Owner
+      summary: Delete the designated owner account.
+      responses:
+        '204':
+          description: Account deleted successfully.
+        '400':
+          description: Invalid URI.
+        '404':
+          description: Account not found.
+        '500' :
+          description: Server error.
+
+  /instances/{instanceId}:
+    parameters:
+    - name: instanceId
+      in: path
+      description: Instance ID
+      required: true
+      schema:
+        type: string
+
+    get:
+      tags:
+        - Instance
+      summary: Retrieve the designated instance.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InstanceFull'
+        '400':
+          description: Invalid URI.
+        '404':
+          description: Instance not found.
+        '500' :
+          description: Server error.
+    
+    put:
+      tags:
+        - Instance
+      summary: Update the designated instance.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InstanceUpdate'
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InstanceFull'
+        '400':
+          description: Invalid URI or update data.
+        '404':
+          description: Instance not found.
+        '500':
+          description: Server error.
+
+
+    delete:
+      tags:
+        - Instance
+      summary: Delete the designated instance.
+      responses:
+        '204':
+          description: Instance deleted successfully.
+        '400':
+          description: Invalid URI.
+        '404':
+          description: Instance not found.
+        '500':
+          description: Server error.
+  
+  /owners/{ownerId}/instances:
+    parameters:
+      - name: ownerId
+        in: path
+        description: Owner ID
+        required: true
+        schema:
+          type: string
+
+    get:
+      tags:
+        - Instance
+      summary: Retrieve a list of instances for the designated owner account.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/InstanceSimple'
+        '400':
+          description: Invalid URI.
+        '404':
+          description: Instance not found.
+        '500':
+          description: Server error.
+
+    post:
+      tags:
+        - Instance
+      summary: Create a Instance for the designated owner account.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InstanceNew'
+      responses:
+        '201':
+          description: Successful creation of Instance
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InstanceFull'
+        '400' :
+          description: Invalid URI or request data.
+        '500' :
+          description: Server error.
+  
+  /instances/{instanceId}/maintainers:
+    parameters:
+      - name: instanceId
+        in: path
+        description: Instance ID
+        required: true
+        schema:
+          type: string
+
+    get:
+      tags:
+        - Maintainer
+      summary: Retrieve a list of maintainer accounts for the designated instance.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MaintainerSimple'
+        '400':
+          description: Invalid URI.
+        '404':
+          description: Instance not found.
+        '500':
+          description: Server error.
+
+    post:
+      tags:
+        - Maintainer
+      summary: Create an unregistered maintainer account for the designated instance.
+      responses:
+        '201':
+          description: Successful creation of Maintainer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MaintainerFull'
+        '400':
+          description: Invalid URI or request data.
+        '404':
+          description: Instance not found.
+        '500' :
+          description: Server error.
+
+  /instances/{instanceId}/maintainers/{maintainerId}:
+    parameters:
+      - name: instanceId
+        in: path
+        description: Instance ID
+        required: true
+        schema:
+          type: string
+      - name: maintainerId
+        in: path
+        description: Maintainer ID
+        required: true
+        schema:
+          type: string
+
+    get:
+      tags:
+        - Maintainer
+      summary: Retrieve the designated maintainer account.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MaintainerFull'
+        '400':
+          description: Invalid URI.
+        '404':
+          description: Instance or Maintainer not found.
+        '500':
+          description: Server error.
+    
+    put:
+      tags:
+        - Maintainer
+      summary: Update the designated maintainer account, registering it if necessary.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserAccount'
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MaintainerFull'
+        '400':
+          description: Invalid URI or request data.
+        '404':
+          description: Instance or Maintainer not found.
+        '500':
+          description: Server error.
+
+    delete:
+      tags:
+        - Maintainer
+      summary: Delete the designated maintainer account.
+      responses:
+        '204':
+          description: Account deleted successfully.
+        '400':
+          description: Invalid URI or request data.
+        '404':
+          description: Instance or Maintainer not found.
+        '500' :
+          description: Server error.
+
+  /instances/{instanceid}/characters:
+    parameters:
+      - name: instanceId
+        in: path
+        description: Instance ID
+        required: true
+        schema:
+          type: string
+
+    get:
+      tags:
+        - Character
+      summary: Retrieve a list of characters for the designated instance.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CharacterSimple'
+        '400':
+          description: Invalid URI.
+        '404':
+          description: Instance not found.
+        '500' :
+          description: Server error.
+
+    post:
+      tags:
+        - Character
+      summary: Create a new empty character for the designated instance, assigned to no maintainer.
+      responses:
+        '201':
+          description: Successful creation of Character.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CharacterFull'
+        '400':
+          description: Invalid URI or request data.
+        '404':
+          description: Instance not found.
+        '500' :
+          description: Server error.
+
+  /instances/{instanceId}/characters/{characterId}:
+    parameters:
+      - name: instanceId
+        in: path
+        description: Instance ID
+        required: true
+        schema:
+          type: string
+      - name: characterId
+        in: path
+        description: Character ID
+        required: true
+        schema:
+          type: string
+
+    get:
+      tags:
+        - Character
+      summary: Retrieve the designated character.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CharacterFull'
+        '400':
+          description: Invalid URI.
+        '404':
+          description: Instance or Character not found.
+        '500' :
+          description: Server error.
+    
+    put:
+      tags:
+        - Character
+      summary: Update the designated character.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CharacterSimple'
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CharacterFull'
+        '400':
+          description: Invalid URI or request data.
+        '404':
+          description: Instance or Character not found.
+        '500' :
+          description: Server error.
+
+    delete:
+      tags:
+        - Character
+      summary: Delete the designated character.
+      responses:
+        '204':
+          description: Character deleted successfully.
+        '400':
+          description: Invalid URI or request data.
+        '404':
+          description: Instance or Character not found.
+        '500' :
+          description: Server error.
+
+  /instances/{instanceid}/maintainers/{maintainerid}/characters:
+    parameters:
+      - name: instanceId
+        in: path
+        description: Instance ID
+        required: true
+        schema:
+          type: string
+      - name: maintainerId
+        in: path
+        description: Maintainer ID
+        required: true
+        schema:
+          type: string
+
+    get:
+      tags:
+        - Character
+      summary: Retrieve a list of characters for the designated maintainer account.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CharacterSimple'
+        '400':
+          description: Invalid URI.
+        '404':
+          description: Instance or Maintainer not found.
+        '500' :
+          description: Server error.
+      
+    post:
+      tags:
+        - Character
+      summary: Create a new empty character for the designated maintainer account.
+      responses:
+        '201':
+          description: Successful creation of Character.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CharacterFull'
+        '400':
+          description: Invalid URI or request data.
+        '404':
+          description: Instance or Maintainer not found.
+        '500' :
+          description: Server error.
+
+components:
+  schemas:
+    OwnerSimple:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        displayname:
+          type: string
+        avatarFilename:
+          type: string
+
+    OwnerFull:
+      allOf:
+        - $ref: '#/components/schemas/OwnerSimple'
+        - type: object
+          properties:
+            email:
+              type: string
+            createDate:
+              type: string
+              format: date-time
+            instances:
+              type: array
+              items:
+                $ref: '#/components/schemas/InstanceSimple'
+
+    InstanceSimple:
+      type: object
+      properties:
+        id:
+          type: integer
+        active:
+          type: boolean
+        subdomainName:
+          type: string
+        displayName:
+          type: string
+
+    InstanceFull:
+      allOf:
+        - $ref: '#/components/schemas/InstanceSimple'
+        - type: object
+          properties:
+            description:
+              type: string
+            createDate:
+              type: string
+              format: date-time
+            lastActivationDate:
+              type: string
+              format: date-time
+            lastDeactivationDate:
+              type: string
+              format: date-time
+            owner:
+              $ref: '#/components/schemas/OwnerSimple'
+            maintainers:
+              type: array
+              items:
+                $ref: '#/components/schemas/MaintainerSimple'
+            characters:
+              type: array
+              items:
+                $ref: '#/components/schemas/CharacterSimple'
+
+    InstanceNew:
+      type: object
+      properties:
+        subdomainName:
+          type: string
+        displayName:
+          type: string
+    
+    InstanceUpdate:
+      type: object
+      properties:
+        active:
+          type: boolean
+        subdomainName:
+          type: string
+        displayName:
+          type: string
+
+    MaintainerSimple:
+      type: object
+      properties:
+        id:
+          type: integer
+        isRegistered:
+          type: boolean
+        username:
+          type: string
+        displayname:
+          type: string
+        avatarFilename:
+          type: string
+
+    MaintainerFull:
+      allOf:
+        - $ref: '#/components/schemas/MaintainerSimple'
+        - type: object
+          properties:
+            email:
+              type: string
+            inviteToken:
+              type: string
+            createDate:
+              type: string
+              format: date-time
+            instance:
+              $ref: '#/components/schemas/InstanceSimple'
+            characters:
+              type: array
+              items:
+                $ref: '#/components/schemas/CharacterSimple'
+
+    CharacterSimple:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        colorPrimary:
+          type: string
+        colorSecondary:
+          type: string
+        avatarFilename:
+          type: string
+        maintainer:
+          $ref: '#/components/schemas/MaintainerSimple'
+
+    CharacterFull:
+      allOf:
+          - $ref: '#/components/schemas/CharacterSimple'
+          - type: object
+            properties:
+              createDate:
+                type: string
+                format: date-time
+              instance:
+                $ref: '#/components/schemas/InstanceSimple'
+
+    UserAccount:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+        email:
+          type: string
+        displayName:
+          type: string
+        avatarFilename:
+          type: string
+
+    UserAccountNew:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+        email:
+          type: string
