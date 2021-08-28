@@ -330,9 +330,9 @@ public class UserAccountService
     // Maintainer-related public methods.
     // -----------------------------------------------------------------------------------------------------------------
 
-    private final String EXCEPTION_MAINTAINER_CREATE_FOR_INSTANCE = "Cannot create transient Maintainer account on Instance id: ";
-    private final String EXCEPTION_MAINTAINER_CREATE_FOR_CHARACTER = "Cannot create transient Maintainer account for Character id: ";
-    private final String EXCEPTION_MAINTAINER_REGISTER = "Cannot register transient Maintainer account with user id: ";
+    private final String EXCEPTION_MAINTAINER_CREATE_FOR_INSTANCE = "Cannot create Maintainer account on Instance id: ";
+    private final String EXCEPTION_MAINTAINER_CREATE_FOR_CHARACTER = "Cannot create Maintainer account for Character id: ";
+    private final String EXCEPTION_MAINTAINER_REGISTER = "Cannot register Maintainer account with user id: ";
     private final String EXCEPTION_MAINTAINER_RETRIEVE = "Cannot retrieve Maintainer account with user id: ";
     private final String EXCEPTION_MAINTAINER_UPDATE = "Cannot update Maintainer account with user id: ";
     private final String EXCEPTION_MAINTAINER_DELETE = "Cannot delete Maintainer account with user id: ";
@@ -340,18 +340,18 @@ public class UserAccountService
     private final String EXCEPTION_MAINTAINER_MODEL = "Cannot return model for Maintainer account with user id: ";
 
     @Transactional
-    public MaintainerDto createTransientMaintainer(InstanceDto parentInstance)
+    public MaintainerDto createUnregisteredMaintainer(InstanceDto parentInstance)
         throws UserAccountServiceException
     {
         if (parentInstance == null)
         {
             throw generateException(
-                "Attempted creation of a transient Maintainer account on a null Instance",
+                "Attempted creation of an unregistered Maintainer account on a null Instance",
                 UserAccountServiceException.Codes.INVALID_INSTANCE_OBJECT);
         }
 
         log.info(
-            "Attempting to create transient Maintainer account on instance id: {}",
+            "Attempting to create unregistered Maintainer account on instance id: {}",
             parentInstance.getId());
 
         Instance instanceEntity;
@@ -380,7 +380,7 @@ public class UserAccountService
         // Generate database entity.
         UserAccount accountEntity = new UserAccount();
 
-        accountEntity.setRole(UserAccountRoles.USER_ROLE_TRANSIENT);
+        accountEntity.setRole(UserAccountRoles.USER_ROLE_UNREGISTERED);
         accountEntity.setInviteToken("newrandomtoken");
         accountEntity.setParentInstance(instanceEntity);
         accountEntity.setCreateDate(LocalDateTime.now());
@@ -397,7 +397,7 @@ public class UserAccountService
                 UserAccountServiceException.Codes.DATABASE_ERROR_WRITE, ex);
         }
 
-        log.info("Created transient Maintainer account with id: {}",
+        log.info("Created unregistered Maintainer account with id: {}",
             accountEntity.getId());
 
         // Update inverse side of Maintainer-Instance relationship because
@@ -428,18 +428,18 @@ public class UserAccountService
     }
 
     @Transactional
-    public MaintainerDto createTransientMaintainer(CharacterDto character)
+    public MaintainerDto createUnregisteredMaintainer(CharacterDto character)
         throws UserAccountServiceException
     {
         if (character == null)
         {
             throw generateException(
-                "Attempted creation of a transient Maintainer acount on a null Character",
+                "Attempted creation of an unregistered Maintainer acount on a null Character",
                 UserAccountServiceException.Codes.INVALID_CHARACTER_OBJECT);
         }
 
         log.info(
-            "Attempting to create transient Maintainer account for Character id: {}",
+            "Attempting to create unregistered Maintainer account for Character id: {}",
             character.getId());
 
         Character characterEntity;
@@ -490,7 +490,7 @@ public class UserAccountService
         // Generate database entity.
         UserAccount accountEntity = new UserAccount();
 
-        accountEntity.setRole(UserAccountRoles.USER_ROLE_TRANSIENT);
+        accountEntity.setRole(UserAccountRoles.USER_ROLE_UNREGISTERED);
         // TODO: Generate randomized token.
         accountEntity.setInviteToken("newrandomtoken");
         accountEntity.setParentInstance(instanceEntity);
@@ -510,7 +510,7 @@ public class UserAccountService
                 UserAccountServiceException.Codes.DATABASE_ERROR_WRITE, ex);
         }
 
-        log.info("Created transient Maintainer account with id: {}",
+        log.info("Created unregistered Maintainer account with id: {}",
             accountEntity.getId());
 
         // Update inverse side of Maintainer-Instance relationship because
@@ -541,32 +541,33 @@ public class UserAccountService
     }
 
     @Transactional
-    public MaintainerDto registerMaintainer(MaintainerDto transientMaintainer,
+    public MaintainerDto registerMaintainer(MaintainerDto unregisteredMaintainer,
         String username, String password, String email, String displayname)
         throws UserAccountServiceException
     {
-        if (transientMaintainer == null)
+        if (unregisteredMaintainer == null)
         {
             throw generateException(
-                "Attempted registration of a null transient Maintainer account",
+                "Attempted registration of a null Maintainer account",
                 UserAccountServiceException.Codes.NULL_ACCOUNT_OBJECT);
         }
 
         log.info(
-            "Attempting to register transient Maintainer account id: {} with username: {}",
-            transientMaintainer.getId(), username);
+            "Attempting to register Maintainer account id: {} with username: {}",
+            unregisteredMaintainer.getId(), username);
 
         Instance instanceEntity;
 
         try
         {
             instanceEntity = instanceService
-                .getInstanceEntity(transientMaintainer.getParentInstanceId());
+                .getInstanceEntity(
+                    unregisteredMaintainer.getParentInstanceId());
         }
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_MAINTAINER_REGISTER + transientMaintainer.getId()
+                EXCEPTION_MAINTAINER_REGISTER + unregisteredMaintainer.getId()
                     + ". Error reading Instance from database",
                 UserAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
@@ -574,7 +575,7 @@ public class UserAccountService
         if (instanceEntity == null)
         {
             throw generateException(
-                EXCEPTION_MAINTAINER_REGISTER + transientMaintainer.getId()
+                EXCEPTION_MAINTAINER_REGISTER + unregisteredMaintainer.getId()
                     + ". Invalid Instance object",
                 UserAccountServiceException.Codes.INVALID_INSTANCE_OBJECT);
         }
@@ -583,7 +584,7 @@ public class UserAccountService
         if (!StringUtils.hasText(username))
         {
             throw generateException(
-                EXCEPTION_MAINTAINER_REGISTER + transientMaintainer.getId()
+                EXCEPTION_MAINTAINER_REGISTER + unregisteredMaintainer.getId()
                     + ". Invalid username",
                 UserAccountServiceException.Codes.INVALID_USERNAME);
         }
@@ -592,7 +593,7 @@ public class UserAccountService
         if (!StringUtils.hasText(password))
         {
             throw generateException(
-                EXCEPTION_MAINTAINER_REGISTER + transientMaintainer.getId()
+                EXCEPTION_MAINTAINER_REGISTER + unregisteredMaintainer.getId()
                     + ". Invalid password",
                 UserAccountServiceException.Codes.INVALID_PASSWORD);
         }
@@ -623,7 +624,7 @@ public class UserAccountService
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_MAINTAINER_REGISTER + transientMaintainer.getId()
+                EXCEPTION_MAINTAINER_REGISTER + unregisteredMaintainer.getId()
                     + ". Error checking for matching accounts from database",
                 UserAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
@@ -641,12 +642,12 @@ public class UserAccountService
 
         try
         {
-            accountEntity = getUserAccountEntity(transientMaintainer);
+            accountEntity = getUserAccountEntity(unregisteredMaintainer);
         }
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_MAINTAINER_REGISTER + transientMaintainer.getId()
+                EXCEPTION_MAINTAINER_REGISTER + unregisteredMaintainer.getId()
                     + ". Error reading from database",
                 UserAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
@@ -655,15 +656,15 @@ public class UserAccountService
         if (accountEntity == null)
         {
             throw generateException(
-                EXCEPTION_MAINTAINER_REGISTER + transientMaintainer.getId()
+                EXCEPTION_MAINTAINER_REGISTER + unregisteredMaintainer.getId()
                     + ". User account not found",
                 UserAccountServiceException.Codes.ACCOUNT_NOT_FOUND);
         }
 
-        if (accountEntity.getRole() != UserAccountRoles.USER_ROLE_TRANSIENT)
+        if (accountEntity.getRole() != UserAccountRoles.USER_ROLE_UNREGISTERED)
         {
             throw generateException(
-                EXCEPTION_MAINTAINER_REGISTER + transientMaintainer.getId()
+                EXCEPTION_MAINTAINER_REGISTER + unregisteredMaintainer.getId()
                     + ". Invalid role",
                 UserAccountServiceException.Codes.INVALID_ROLE);
         }
@@ -684,13 +685,13 @@ public class UserAccountService
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_MAINTAINER_REGISTER + transientMaintainer.getId()
+                EXCEPTION_MAINTAINER_REGISTER + unregisteredMaintainer.getId()
                     + ". Error writing to database",
                 UserAccountServiceException.Codes.DATABASE_ERROR_WRITE, ex);
         }
 
         log.info(
-            "Registered transient Maintainer account id: {} with username: {}",
+            "Registered Maintainer account id: {} with username: {}",
             accountEntity.getId(), accountEntity.getUsername());
 
         try
@@ -702,7 +703,7 @@ public class UserAccountService
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_MAINTAINER_MODEL + transientMaintainer.getId()
+                EXCEPTION_MAINTAINER_MODEL + unregisteredMaintainer.getId()
                     + ". Error reading from database",
                 UserAccountServiceException.Codes.DATABASE_ERROR_READ_MAPPING,
                 ex);
@@ -739,7 +740,7 @@ public class UserAccountService
 
         // Check if the account is in the correct role.
         if (accountEntity.getRole() != UserAccountRoles.USER_ROLE_MAINTAINER
-            && accountEntity.getRole() != UserAccountRoles.USER_ROLE_TRANSIENT)
+            && accountEntity.getRole() != UserAccountRoles.USER_ROLE_UNREGISTERED)
         {
             throw generateException(
                 EXCEPTION_MAINTAINER_RETRIEVE + userId + ". Invalid role",
@@ -873,7 +874,7 @@ public class UserAccountService
 
         // Check if the account is in the correct role.
         if (accountEntity.getRole() != UserAccountRoles.USER_ROLE_MAINTAINER
-            || accountEntity.getRole() != UserAccountRoles.USER_ROLE_TRANSIENT)
+            || accountEntity.getRole() != UserAccountRoles.USER_ROLE_UNREGISTERED)
         {
             throw generateException(
                 EXCEPTION_MAINTAINER_DELETE + userId + ". Invalid role",
@@ -1025,14 +1026,14 @@ public class UserAccountService
             .collect(Collectors.toSet()));
         dto.setCreateDate(ua.getCreateDate());
 
-        if (ua.getRole() == UserAccountRoles.USER_ROLE_TRANSIENT)
+        if (ua.getRole() == UserAccountRoles.USER_ROLE_UNREGISTERED)
         {
-            dto.setIsTransient(true);
+            dto.setIsRegistered(false);
             dto.setInviteToken(ua.getInviteToken());
         }
         else
         {
-            dto.setIsTransient(false);
+            dto.setIsRegistered(true);
             dto.setUsername(ua.getUsername());
             dto.setEmail(ua.getEmail());
             dto.setDisplayname(ua.getDisplayname());

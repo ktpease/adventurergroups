@@ -133,12 +133,12 @@ public class CharacterService
                 CharacterServiceException.Codes.CREATOR_NOT_FOUND);
         }
 
-        if (creatorEntity.getRole() == UserAccountRoles.USER_ROLE_TRANSIENT)
+        if (creatorEntity.getRole() == UserAccountRoles.USER_ROLE_UNREGISTERED)
         {
             throw generateException(
                 EXCEPTION_CHARACTER_CREATE + instance.getId()
                     + ". Creator User Account with id: " + creator.getId()
-                    + " is transient",
+                    + " is unregistered",
                 CharacterServiceException.Codes.INVALID_CREATOR_ROLE);
         }
 

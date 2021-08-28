@@ -13,6 +13,6 @@ public class MaintainerDto extends UserAccountDto
 
     private Set<Long> characterIds;
 
-    private Boolean isTransient;
+    private Boolean isRegistered;
     private String inviteToken;
 }

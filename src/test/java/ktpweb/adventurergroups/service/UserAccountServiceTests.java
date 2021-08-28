@@ -98,7 +98,7 @@ class UserAccountServiceTests
 	}
 
 	@Test
-	void createTransientMaintainerTests() throws Exception
+	void createUnregisteredMaintainerTests() throws Exception
 	{
 		UserAccountServiceException exception;
 
@@ -113,7 +113,7 @@ class UserAccountServiceTests
 
 		// Create maintainer for Instance.
 		MaintainerDto testMaintainerForInstance = userAccountService
-			.createTransientMaintainer(testInstance);
+			.createUnregisteredMaintainer(testInstance);
 
 		assertNotNull(testMaintainerForInstance.getId(),
 			"Cannot create Test Maintainer (instance) in database");
@@ -122,13 +122,13 @@ class UserAccountServiceTests
 			"Test Maintainer (instance) does not have correct instance");
 
 		assertDoesNotThrow(
-			() -> userAccountService.createTransientMaintainer(testInstance),
+			() -> userAccountService.createUnregisteredMaintainer(testInstance),
 			"Cannot create separate maintainer (instance)");
 
 		// Fail to create a maintainer with an invalid instance.
 		exception = assertThrows(UserAccountServiceException.class,
 			() -> userAccountService
-				.createTransientMaintainer((InstanceDto) null),
+				.createUnregisteredMaintainer((InstanceDto) null),
 			"Should not create Maintainer (instance) with no instance");
 		assertEquals(exception.getCode(),
 			UserAccountServiceException.Codes.INVALID_INSTANCE_OBJECT);
@@ -136,7 +136,7 @@ class UserAccountServiceTests
 		// Fail to create a maintainer with an invalid character.
 		exception = assertThrows(UserAccountServiceException.class,
 			() -> userAccountService
-				.createTransientMaintainer((CharacterDto) null),
+				.createUnregisteredMaintainer((CharacterDto) null),
 			"Should not create Maintainer (character) with no character");
 		assertEquals(exception.getCode(),
 			UserAccountServiceException.Codes.INVALID_CHARACTER_OBJECT);
@@ -155,11 +155,11 @@ class UserAccountServiceTests
 			"test");
 
 		// Create and Register maintainer
-		MaintainerDto testTransientMaintainer = userAccountService
-			.createTransientMaintainer(testInstance);
+		MaintainerDto testunregisteredMaintainer = userAccountService
+			.createUnregisteredMaintainer(testInstance);
 
 		MaintainerDto testRegisteredMaintainer = userAccountService
-			.registerMaintainer(testTransientMaintainer, "testmaintainer",
+			.registerMaintainer(testunregisteredMaintainer, "testmaintainer",
 				"testpassword", "testemail", null);
 
 		assertNotNull(testRegisteredMaintainer.getId(),
@@ -177,14 +177,14 @@ class UserAccountServiceTests
 		assertEquals(exception.getCode(),
 			UserAccountServiceException.Codes.INVALID_ROLE);
 
-		// Create second transient maintainer for fail conditions.
-		MaintainerDto testTransientMaintainer2 = userAccountService
-			.createTransientMaintainer(testInstance);
+		// Create second unregistered maintainer for fail conditions.
+		MaintainerDto testunregisteredMaintainer2 = userAccountService
+			.createUnregisteredMaintainer(testInstance);
 
 		// Fail to register maintainer with an invalid username.
 		exception = assertThrows(UserAccountServiceException.class,
 			() -> userAccountService.registerMaintainer(
-				testTransientMaintainer2, "", "testpassword", null, null),
+				testunregisteredMaintainer2, "", "testpassword", null, null),
 			"Should not register Maintainer with no username.");
 		assertEquals(exception.getCode(),
 			UserAccountServiceException.Codes.INVALID_USERNAME);
@@ -192,7 +192,7 @@ class UserAccountServiceTests
 		// Fail to register maintainer with an invalid password.
 		exception = assertThrows(UserAccountServiceException.class,
 			() -> userAccountService.registerMaintainer(
-				testTransientMaintainer2, "testmaintainer2", "", null, null),
+				testunregisteredMaintainer2, "testmaintainer2", "", null, null),
 			"Should not register Maintainer with bad password.");
 		assertEquals(exception.getCode(),
 			UserAccountServiceException.Codes.INVALID_PASSWORD);
@@ -201,7 +201,7 @@ class UserAccountServiceTests
 		// maintainer.
 		exception = assertThrows(UserAccountServiceException.class,
 			() -> userAccountService.registerMaintainer(
-				testTransientMaintainer2, "testmaintainer", "testpassword",
+				testunregisteredMaintainer2, "testmaintainer", "testpassword",
 				null, null),
 			"Should not register Maintainer with same username as Test Maintainer");
 		assertEquals(exception.getCode(),
@@ -211,7 +211,7 @@ class UserAccountServiceTests
 		// maintainer.
 		exception = assertThrows(UserAccountServiceException.class,
 			() -> userAccountService.registerMaintainer(
-				testTransientMaintainer2, "testmaintainer2", "testpassword",
+				testunregisteredMaintainer2, "testmaintainer2", "testpassword",
 				"testemail", null),
 			"Should not register Maintainer with same non-null email as Test Maintainer");
 		assertEquals(exception.getCode(),
@@ -221,7 +221,7 @@ class UserAccountServiceTests
 		// owner.
 		exception = assertThrows(UserAccountServiceException.class,
 			() -> userAccountService.registerMaintainer(
-				testTransientMaintainer2, "testowner", "testpassword", null,
+				testunregisteredMaintainer2, "testowner", "testpassword", null,
 				null),
 			"Should not register Maintainer with same username as Test Owner");
 		assertEquals(exception.getCode(),
@@ -230,7 +230,7 @@ class UserAccountServiceTests
 		// Fail to register maintainer with the same email as instance owner.
 		exception = assertThrows(UserAccountServiceException.class,
 			() -> userAccountService.registerMaintainer(
-				testTransientMaintainer2, "testmaintainer2", "testpassword",
+				testunregisteredMaintainer2, "testmaintainer2", "testpassword",
 				"testowneremail", null),
 			"Should not register Maintainer with same non-null email as Test Owner");
 		assertEquals(exception.getCode(),
