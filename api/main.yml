@@ -14,6 +14,8 @@ tags:
   description: For each instance's maintainer user accounts.
 - name: Character
   description: For each instance or maintainer's characters.
+- name: Character Group
+  description: For organizing each instance's characters.
 
 paths:
   /owners:
@@ -336,7 +338,7 @@ paths:
         '500' :
           description: Server error.
 
-  /instances/{instanceid}/characters:
+  /instances/{instanceId}/characters:
     parameters:
       - name: instanceId
         in: path
@@ -453,7 +455,7 @@ paths:
         '500' :
           description: Server error.
 
-  /instances/{instanceid}/maintainers/{maintainerid}/characters:
+  /instances/{instanceId}/maintainers/{maintainerId}/characters:
     parameters:
       - name: instanceId
         in: path
@@ -503,6 +505,158 @@ paths:
           description: Invalid URI or request data.
         '404':
           description: Instance or Maintainer not found.
+        '500' :
+          description: Server error.
+
+  /instances/{instanceId}/groups/{groupId}/characters:
+    parameters:
+      - name: instanceId
+        in: path
+        description: Instance ID
+        required: true
+        schema:
+          type: string
+      - name: groupId
+        in: path
+        description: Character Group ID
+        required: true
+        schema:
+          type: string
+
+    get:
+      tags:
+        - Character
+      summary: Retrieve a list of characters for the designated character group.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CharacterSimple'
+        '400':
+          description: Invalid URI.
+        '404':
+          description: Instance or Maintainer not found.
+        '500' :
+          description: Server error.
+
+  /instances/{instanceId}/groups:
+    parameters:
+      - name: instanceId
+        in: path
+        description: Instance ID
+        required: true
+        schema:
+          type: string
+
+    get:
+      tags:
+        - Character Group
+      summary: Retrieve a list of character groups for the designated instance.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CharacterGroupSimple'
+        '400':
+          description: Invalid URI.
+        '404':
+          description: Instance not found.
+        '500' :
+          description: Server error.
+
+    post:
+      tags:
+        - Character Group
+      summary: Create a new empty character group for the designated instance.
+      responses:
+        '201':
+          description: Successful creation of Character.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CharacterGroupFull'
+        '400':
+          description: Invalid URI or request data.
+        '404':
+          description: Instance not found.
+        '500' :
+          description: Server error.
+
+  /instances/{instanceId}/groups/{groupId}:
+    parameters:
+      - name: instanceId
+        in: path
+        description: Instance ID
+        required: true
+        schema:
+          type: string
+      - name: groupId
+        in: path
+        description: Character Group ID
+        required: true
+        schema:
+          type: string
+
+    get:
+      tags:
+        - Character Group
+      summary: Retrieve the designated character group.
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CharacterGroupFull'
+        '400':
+          description: Invalid URI.
+        '404':
+          description: Instance or Character Group not found.
+        '500' :
+          description: Server error.
+    
+    put:
+      tags:
+        - Character Group
+      summary: Update the designated character group.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CharacterGroupSimple'
+      responses:
+        '200':
+          description: Success.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CharacterGroupFull'
+        '400':
+          description: Invalid URI or request data.
+        '404':
+          description: Instance or Character Group not found.
+        '500' :
+          description: Server error.
+
+    delete:
+      tags:
+        - Character Group
+      summary: Delete the designated character group, with all included characters made ungrouped.
+      responses:
+        '204':
+          description: Character Group deleted successfully.
+        '400':
+          description: Invalid URI or request data.
+        '404':
+          description: Instance or Character not found.
         '500' :
           description: Server error.
 
@@ -573,13 +727,15 @@ components:
               type: array
               items:
                 $ref: '#/components/schemas/CharacterSimple'
+            characterGroups:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CharacterGroupSimple'
 
     InstanceNew:
       type: object
       properties:
         subdomainName:
-          type: string
-        displayName:
           type: string
     
     InstanceUpdate:
@@ -653,6 +809,51 @@ components:
                 format: date-time
               instance:
                 $ref: '#/components/schemas/InstanceSimple'
+              characterGroup:
+                $ref: '#/components/schemas/CharacterGroupSimple'
+
+    CharacterGroupSimple:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+
+    CharacterGroupFull:
+      allOf:
+          - $ref: '#/components/schemas/CharacterGroupSimple'
+          - type: object
+            properties:
+              description:
+                type: string
+              colorPrimary:
+                type: string
+              createDate:
+                type: string
+                format: date-time
+              instance:
+                $ref: '#/components/schemas/InstanceSimple'
+              characters:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CharacterSimple'
+
+    CharacterGroupNew:
+      type: object
+      properties:
+        name:
+          type: string
+
+    CharacterGroupUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        colorPrimary:
+          type: string
 
     UserAccount:
       type: object
