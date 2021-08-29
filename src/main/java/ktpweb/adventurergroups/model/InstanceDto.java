@@ -3,9 +3,12 @@ package ktpweb.adventurergroups.model;
 import java.time.LocalDateTime;
 import java.util.Set;
 
+import com.fasterxml.jackson.annotation.JsonFilter;
+
 import lombok.Data;
 
 @Data
+@JsonFilter("instanceFilter")
 public class InstanceDto
 {
     private Long id;

@@ -1,13 +1,24 @@
 package ktpweb.adventurergroups.model;
 
+import java.time.LocalDateTime;
 import java.util.Set;
 
+import com.fasterxml.jackson.annotation.JsonFilter;
+
 import lombok.Data;
-import lombok.EqualsAndHashCode;
 
 @Data
-@EqualsAndHashCode(callSuper = true)
-public class OwnerDto extends UserAccountDto
+@JsonFilter("ownerFilter")
+public class OwnerDto
 {
+    private Long id;
+
+    private String username;
+    private String email;
+    private String displayname;
+    private String avatarFilename;
+
+    private LocalDateTime createDate;
+
     private Set<Long> instanceIds;
 }

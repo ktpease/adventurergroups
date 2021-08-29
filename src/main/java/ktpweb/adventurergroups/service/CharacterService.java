@@ -14,15 +14,12 @@ import org.springframework.transaction.annotation.Transactional;
 import ktpweb.adventurergroups.entity.Character;
 import ktpweb.adventurergroups.entity.CharacterGroup;
 import ktpweb.adventurergroups.entity.Instance;
-import ktpweb.adventurergroups.entity.UserAccount;
 import ktpweb.adventurergroups.exception.CharacterServiceException;
 import ktpweb.adventurergroups.model.CharacterDto;
 import ktpweb.adventurergroups.model.CharacterGroupDto;
 import ktpweb.adventurergroups.model.InstanceDto;
-import ktpweb.adventurergroups.model.UserAccountDto;
 import ktpweb.adventurergroups.repository.CharacterGroupRepository;
 import ktpweb.adventurergroups.repository.CharacterRepository;
-import ktpweb.adventurergroups.util.UserAccountUtils.UserAccountRoles;
 import lombok.extern.slf4j.Slf4j;
 
 @Service
@@ -55,8 +52,7 @@ public class CharacterService
     private final String EXCEPTION_CHARACTER_MODEL = "Cannot return model for Character with id: ";
 
     @Transactional
-    public CharacterDto createCharacter(InstanceDto instance,
-        CharacterGroupDto characterGroup, UserAccountDto creator)
+    public CharacterDto createCharacter(InstanceDto instance)
         throws CharacterServiceException
     {
         if (instance == null)
@@ -65,17 +61,6 @@ public class CharacterService
                 "Attempted creation of a Character with a null Instance",
                 CharacterServiceException.Codes.INVALID_INSTANCE_OBJECT);
         }
-
-        if (creator == null)
-        {
-            throw generateException(
-                "Attempted creation of a Character with a null creator User Account",
-                CharacterServiceException.Codes.INVALID_CREATOR_OBJECT);
-        }
-
-        log.info(
-            "Attempting to create Character for Instance id: {} by User Account id: {}",
-            instance.getId(), creator.getId());
 
         // Load and validate Instance.
         Instance instanceEntity;
@@ -108,66 +93,12 @@ public class CharacterService
                 CharacterServiceException.Codes.INSTANCE_INACTIVE);
         }
 
-        // Load and validate creator User Account.
-        UserAccount creatorEntity;
-
-        try
-        {
-            creatorEntity = userAccountService.getUserAccountEntity(creator);
-        }
-        catch (Exception ex)
-        {
-            throw generateException(
-                EXCEPTION_CHARACTER_CREATE + instance.getId()
-                    + ". Error reading creator User Account with id: "
-                    + creator.getId() + " from database",
-                CharacterServiceException.Codes.DATABASE_ERROR_READ, ex);
-        }
-
-        if (creatorEntity == null)
-        {
-            throw generateException(
-                EXCEPTION_CHARACTER_CREATE + instance.getId()
-                    + ". Creator User Account with id: " + creator.getId()
-                    + " not found",
-                CharacterServiceException.Codes.CREATOR_NOT_FOUND);
-        }
-
-        if (creatorEntity.getRole() == UserAccountRoles.USER_ROLE_UNREGISTERED)
-        {
-            throw generateException(
-                EXCEPTION_CHARACTER_CREATE + instance.getId()
-                    + ". Creator User Account with id: " + creator.getId()
-                    + " is unregistered",
-                CharacterServiceException.Codes.INVALID_CREATOR_ROLE);
-        }
-
-        if ((creatorEntity.getRole() == UserAccountRoles.USER_ROLE_OWNER
-            && (creatorEntity.getInstances() == null
-                || !creatorEntity.getInstances().contains(instanceEntity)))
-            || (creatorEntity.getRole() == UserAccountRoles.USER_ROLE_MAINTAINER
-                && creatorEntity.getParentInstance() != instanceEntity))
-        {
-            throw generateException(
-                EXCEPTION_CHARACTER_CREATE + instance.getId()
-                    + ". Creator User Account with id: " + creator.getId()
-                    + " should not see Instance",
-                CharacterServiceException.Codes.INVALID_CREATOR_OBJECT);
-        }
-
-        // Load and validate Character Group.
-        if (characterGroup != null)
-        {
-
-        }
-
         // Generate database entity.
         Character characterEntity = new Character();
 
         characterEntity.setInstance(instanceEntity);
         characterEntity.setName(DEFAULT_CHARACTER_NAME);
         characterEntity.setDescription("");
-        characterEntity.setCreatedBy(creatorEntity);
         characterEntity.setCreateDate(LocalDateTime.now());
 
         try

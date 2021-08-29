@@ -55,10 +55,6 @@ public class Character
 
     // Logging
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "created_by_id")
-    private UserAccount createdBy;
-
     private LocalDateTime createDate;
     private LocalDateTime deleteDate;
 }

@@ -23,7 +23,6 @@ import ktpweb.adventurergroups.model.CharacterDto;
 import ktpweb.adventurergroups.model.InstanceDto;
 import ktpweb.adventurergroups.model.MaintainerDto;
 import ktpweb.adventurergroups.model.OwnerDto;
-import ktpweb.adventurergroups.model.UserAccountDto;
 import ktpweb.adventurergroups.repository.UserAccountRepository;
 import ktpweb.adventurergroups.util.UserAccountUtils.UserAccountRoles;
 import lombok.extern.slf4j.Slf4j;
@@ -922,10 +921,16 @@ public class UserAccountService
         }
     }
 
-    protected UserAccount getUserAccountEntity(UserAccountDto userAccountDto)
+    protected UserAccount getUserAccountEntity(OwnerDto ownerDto)
         throws Exception
     {
-        return getUserAccountEntity(userAccountDto.getId());
+        return getUserAccountEntity(ownerDto.getId());
+    }
+
+    protected UserAccount getUserAccountEntity(MaintainerDto maintainerDto)
+        throws Exception
+    {
+        return getUserAccountEntity(maintainerDto.getId());
     }
 
     private Boolean accountExistsInGlobal(String username, String email)
