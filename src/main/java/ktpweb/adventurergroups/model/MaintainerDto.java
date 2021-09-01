@@ -20,9 +20,9 @@ public class MaintainerDto
 
     private LocalDateTime createDate;
 
-    private Long parentInstanceId;
+    private InstanceDto instance;
 
-    private Set<Long> characterIds;
+    private Set<CharacterDto> characters;
 
     private Boolean isRegistered;
     private String inviteToken;

@@ -23,6 +23,7 @@ import ktpweb.adventurergroups.model.CharacterDto;
 import ktpweb.adventurergroups.model.InstanceDto;
 import ktpweb.adventurergroups.model.MaintainerDto;
 import ktpweb.adventurergroups.model.OwnerDto;
+import ktpweb.adventurergroups.model.UserAccountDto;
 import ktpweb.adventurergroups.repository.UserAccountRepository;
 import ktpweb.adventurergroups.util.UserAccountUtils.UserAccountRoles;
 import lombok.extern.slf4j.Slf4j;
@@ -52,8 +53,8 @@ public class UserAccountService
     private final String EXCEPTION_OWNER_MODEL = "Cannot return model for Owner account with user id: ";
 
     @Transactional
-    public OwnerDto createOwner(String username, String password, String email,
-        String displayname) throws UserAccountServiceException
+    public OwnerDto createOwner(String username, String password, String email)
+        throws UserAccountServiceException
     {
         log.info("Attempting to create Owner account with username: {}",
             username);
@@ -103,8 +104,7 @@ public class UserAccountService
         accountEntity.setUsername(username);
         accountEntity.setPassword(password);
         accountEntity.setEmail(email);
-        accountEntity.setDisplayname(
-            StringUtils.hasText(displayname) ? displayname : username);
+        accountEntity.setDisplayname(username);
         accountEntity.setRole(UserAccountRoles.USER_ROLE_OWNER);
         accountEntity.setCreateDate(LocalDateTime.now());
 
@@ -137,6 +137,13 @@ public class UserAccountService
                 UserAccountServiceException.Codes.DATABASE_ERROR_READ_MAPPING,
                 ex);
         }
+    }
+
+    public OwnerDto createOwner(UserAccountDto newAccount)
+        throws UserAccountServiceException
+    {
+        return createOwner(newAccount.getUsername(), newAccount.getPassword(),
+            newAccount.getEmail());
     }
 
     @Transactional
@@ -339,8 +346,8 @@ public class UserAccountService
     private final String EXCEPTION_MAINTAINER_MODEL = "Cannot return model for Maintainer account with user id: ";
 
     @Transactional
-    public MaintainerDto createUnregisteredMaintainer(InstanceDto parentInstance)
-        throws UserAccountServiceException
+    public MaintainerDto createUnregisteredMaintainer(
+        InstanceDto parentInstance) throws UserAccountServiceException
     {
         if (parentInstance == null)
         {
@@ -468,7 +475,7 @@ public class UserAccountService
         try
         {
             instanceEntity = instanceService
-                .getInstanceEntity(character.getInstanceId());
+                .getInstanceEntity(character.getInstance());
         }
         catch (Exception ex)
         {
@@ -540,9 +547,9 @@ public class UserAccountService
     }
 
     @Transactional
-    public MaintainerDto registerMaintainer(MaintainerDto unregisteredMaintainer,
-        String username, String password, String email, String displayname)
-        throws UserAccountServiceException
+    public MaintainerDto registerMaintainer(
+        MaintainerDto unregisteredMaintainer, String username, String password,
+        String email, String displayname) throws UserAccountServiceException
     {
         if (unregisteredMaintainer == null)
         {
@@ -559,9 +566,8 @@ public class UserAccountService
 
         try
         {
-            instanceEntity = instanceService
-                .getInstanceEntity(
-                    unregisteredMaintainer.getParentInstanceId());
+            instanceEntity = instanceService.getInstanceEntity(
+                unregisteredMaintainer.getInstance().getId());
         }
         catch (Exception ex)
         {
@@ -689,8 +695,7 @@ public class UserAccountService
                 UserAccountServiceException.Codes.DATABASE_ERROR_WRITE, ex);
         }
 
-        log.info(
-            "Registered Maintainer account id: {} with username: {}",
+        log.info("Registered Maintainer account id: {} with username: {}",
             accountEntity.getId(), accountEntity.getUsername());
 
         try
@@ -739,7 +744,8 @@ public class UserAccountService
 
         // Check if the account is in the correct role.
         if (accountEntity.getRole() != UserAccountRoles.USER_ROLE_MAINTAINER
-            && accountEntity.getRole() != UserAccountRoles.USER_ROLE_UNREGISTERED)
+            && accountEntity
+                .getRole() != UserAccountRoles.USER_ROLE_UNREGISTERED)
         {
             throw generateException(
                 EXCEPTION_MAINTAINER_RETRIEVE + userId + ". Invalid role",
@@ -873,7 +879,8 @@ public class UserAccountService
 
         // Check if the account is in the correct role.
         if (accountEntity.getRole() != UserAccountRoles.USER_ROLE_MAINTAINER
-            || accountEntity.getRole() != UserAccountRoles.USER_ROLE_UNREGISTERED)
+            || accountEntity
+                .getRole() != UserAccountRoles.USER_ROLE_UNREGISTERED)
         {
             throw generateException(
                 EXCEPTION_MAINTAINER_DELETE + userId + ". Invalid role",
@@ -1003,15 +1010,34 @@ public class UserAccountService
 
     protected OwnerDto getOwnerDto(UserAccount ua) throws Exception
     {
+        return getOwnerDto(ua, false);
+    }
+
+    protected OwnerDto getOwnerDto(UserAccount ua, Boolean skipNested)
+        throws Exception
+    {
         OwnerDto dto = new OwnerDto();
 
         dto.setId(ua.getId());
+
         dto.setUsername(ua.getUsername());
         dto.setEmail(ua.getEmail());
         dto.setDisplayname(ua.getDisplayname());
-        dto.setInstanceIds(Optional.ofNullable(ua.getInstances())
-            .map(Set::stream).orElseGet(Stream::empty).map(i -> i.getId())
-            .collect(Collectors.toSet()));
+
+        if (!skipNested)
+        {
+            dto.setInstances(Optional.ofNullable(ua.getInstances())
+                .map(Set::stream).orElseGet(Stream::empty).map(i -> {
+                    try
+                    {
+                        return instanceService.getInstanceDto(i, true);
+                    }
+                    catch (Exception e)
+                    {
+                        throw new RuntimeException(e);
+                    }
+                }).collect(Collectors.toSet()));
+        }
 
         dto.setCreateDate(ua.getCreateDate());
 
@@ -1020,15 +1046,16 @@ public class UserAccountService
 
     protected MaintainerDto getMaintainerDto(UserAccount ua) throws Exception
     {
+        return getMaintainerDto(ua, false);
+    }
+
+    protected MaintainerDto getMaintainerDto(UserAccount ua, Boolean skipNested)
+        throws Exception
+    {
         MaintainerDto dto = new MaintainerDto();
 
         dto.setId(ua.getId());
-        dto.setParentInstanceId(
-            ua.getParentInstance() != null ? ua.getParentInstance().getId()
-                : null);
-        dto.setCharacterIds(Optional.ofNullable(ua.getCharacters())
-            .map(Set::stream).orElseGet(Stream::empty).map(c -> c.getId())
-            .collect(Collectors.toSet()));
+
         dto.setCreateDate(ua.getCreateDate());
 
         if (ua.getRole() == UserAccountRoles.USER_ROLE_UNREGISTERED)
@@ -1042,6 +1069,25 @@ public class UserAccountService
             dto.setUsername(ua.getUsername());
             dto.setEmail(ua.getEmail());
             dto.setDisplayname(ua.getDisplayname());
+        }
+
+        if (!skipNested)
+        {
+            dto.setInstance(ua.getParentInstance() != null
+                ? instanceService.getInstanceDto(ua.getParentInstance(), true)
+                : null);
+
+            dto.setCharacters(Optional.ofNullable(ua.getCharacters())
+                .map(Set::stream).orElseGet(Stream::empty).map(c -> {
+                    try
+                    {
+                        return characterService.getCharacterDto(c, true);
+                    }
+                    catch (Exception e)
+                    {
+                        throw new RuntimeException(e);
+                    }
+                }).collect(Collectors.toSet()));
         }
 
         return dto;

@@ -57,7 +57,7 @@ class InstanceServiceTests
 
         // Create a new owner for the test.
         OwnerDto testOwner = userAccountService.createOwner("testowner",
-            "testpassword", "testemail", null);
+            "testpassword", "testemail");
 
         // Create a new instance.
         InstanceDto testInstance = instanceService.createInstance(testOwner,
@@ -65,7 +65,7 @@ class InstanceServiceTests
 
         assertNotNull(testInstance.getId(),
             "Cannot create Test Instance in database");
-        assertEquals(testInstance.getOwnerId(), testOwner.getId(),
+        assertEquals(testInstance.getOwner().getId(), testOwner.getId(),
             "Test Instance does not have correct Owner");
 
         // Fail to create an instance with an invalid subdomain name.
@@ -102,7 +102,7 @@ class InstanceServiceTests
 
         // Create a new owner and instancefor the test.
         OwnerDto testOwner = userAccountService.createOwner("testowner",
-            "testpassword", "testemail", null);
+            "testpassword", "testemail");
         InstanceDto testInstance = instanceService.createInstance(testOwner,
             "test");
 

@@ -34,11 +34,12 @@ public class InstanceService
     @Autowired
     private UserAccountService userAccountService;
 
+    @Autowired
+    private CharacterService characterService;
+
     // -----------------------------------------------------------------------------------------------------------------
     // Instance-related public methods.
     // -----------------------------------------------------------------------------------------------------------------
-
-    private final String DEFAULT_NAME = "New Instance";
 
     private final String EXCEPTION_CREATE = "Cannot create Instance for owner User Account id: ";
     private final String EXCEPTION_RETRIEVE = "Cannot retrieve Instance with id: ";
@@ -111,10 +112,9 @@ public class InstanceService
         // Generate database entity.
         Instance instanceEntity = new Instance();
 
-        instanceEntity.setActive(false);
         instanceEntity.setOwner(ownerEntity);
         instanceEntity.setSubdomainName(subdomainName);
-        instanceEntity.setDisplayName(DEFAULT_NAME);
+        instanceEntity.setDisplayName(subdomainName);
         instanceEntity.setCreateDate(LocalDateTime.now());
 
         try
@@ -131,8 +131,7 @@ public class InstanceService
 
         log.info("Created Instance with id: {}", instanceEntity.getId());
 
-        // Update inverse side of Instance-Owner relationship because it doesn't
-        // automatically do that?!?!
+        // Update inverse side of Instance-Owner relationship.
         Set<Instance> instanceList = ownerEntity.getInstances();
 
         if (instanceList == null)
@@ -514,31 +513,69 @@ public class InstanceService
 
     protected InstanceDto getInstanceDto(Instance instance) throws Exception
     {
+        return getInstanceDto(instance, false);
+    }
+
+    protected InstanceDto getInstanceDto(Instance instance, Boolean skipNested)
+        throws Exception
+    {
         InstanceDto dto = new InstanceDto();
 
         dto.setId(instance.getId());
+
         dto.setSubdomainName(instance.getSubdomainName());
         dto.setDisplayName(instance.getDisplayName());
         dto.setDescription(instance.getDescription());
-        dto.setOwnerId(
-            instance.getOwner() != null ? instance.getOwner().getId() : null);
         dto.setActive(instance.getActive());
+
         dto.setCreateDate(instance.getCreateDate());
         dto.setLastActivateDate(instance.getLastActivateDate());
         dto.setLastDeactivateDate(instance.getLastDeactivateDate());
 
-        dto.setMaintainerIds(Optional.ofNullable(instance.getMaintainers())
-            .map(Set::stream).orElseGet(Stream::empty).map(ua -> ua.getId())
-            .collect(Collectors.toSet()));
+        if (!skipNested)
+        {
+            dto.setOwner(instance.getOwner() != null
+                ? userAccountService.getOwnerDto(instance.getOwner(), true)
+                : null);
 
-        dto.setCharacterIds(Optional.ofNullable(instance.getCharacters())
-            .map(Set::stream).orElseGet(Stream::empty).map(c -> c.getId())
-            .collect(Collectors.toSet()));
+            dto.setMaintainers(Optional.ofNullable(instance.getMaintainers())
+                .map(Set::stream).orElseGet(Stream::empty).map(m -> {
+                    try
+                    {
+                        return userAccountService.getMaintainerDto(m, true);
+                    }
+                    catch (Exception e)
+                    {
+                        throw new RuntimeException(e);
+                    }
+                }).collect(Collectors.toSet()));
 
-        dto.setCharacterGroupIds(
-            Optional.ofNullable(instance.getCharacterGroups()).map(Set::stream)
-                .orElseGet(Stream::empty).map(cg -> cg.getId())
-                .collect(Collectors.toSet()));
+            dto.setCharacters(Optional.ofNullable(instance.getCharacters())
+                .map(Set::stream).orElseGet(Stream::empty).map(c -> {
+                    try
+                    {
+                        return characterService.getCharacterDto(c, true);
+                    }
+                    catch (Exception e)
+                    {
+                        throw new RuntimeException(e);
+                    }
+                }).collect(Collectors.toSet()));
+
+            dto.setCharacterGroups(
+                Optional.ofNullable(instance.getCharacterGroups())
+                    .map(Set::stream).orElseGet(Stream::empty).map(cg -> {
+                        try
+                        {
+                            return characterService.getCharacterGroupDto(cg,
+                                true);
+                        }
+                        catch (Exception e)
+                        {
+                            throw new RuntimeException(e);
+                        }
+                    }).collect(Collectors.toSet()));
+        }
 
         return dto;
     }

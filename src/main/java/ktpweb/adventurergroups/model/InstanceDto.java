@@ -19,11 +19,11 @@ public class InstanceDto
     private String displayName;
     private String description;
 
-    private Long ownerId;
-    private Set<Long> maintainerIds;
+    private OwnerDto owner;
+    private Set<MaintainerDto> maintainers;
 
-    private Set<Long> characterIds;
-    private Set<Long> characterGroupIds;
+    private Set<CharacterDto> characters;
+    private Set<CharacterGroupDto> characterGroups;
 
     private LocalDateTime createDate;
     private LocalDateTime lastActivateDate;

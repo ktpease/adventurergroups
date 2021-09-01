@@ -632,21 +632,35 @@ public class CharacterService
 
     protected CharacterDto getCharacterDto(Character character) throws Exception
     {
+        return getCharacterDto(character, false);
+    }
+
+    protected CharacterDto getCharacterDto(Character character,
+        Boolean skipNested) throws Exception
+    {
         CharacterDto dto = new CharacterDto();
 
         dto.setId(character.getId());
         dto.setName(character.getName());
         dto.setDescription(character.getDescription());
-        dto.setInstanceId(
-            character.getInstance() != null ? character.getInstance().getId()
-                : null);
-        dto.setMaintainerId(character.getMaintainer() != null
-            ? character.getMaintainer().getId()
-            : null);
-        dto.setCharacterGroupId(character.getCharacterGroup() != null
-            ? character.getCharacterGroup().getId()
-            : null);
+
         dto.setCreateDate(character.getCreateDate());
+
+        if (!skipNested)
+        {
+            dto.setInstance(character.getInstance() != null
+                ? instanceService.getInstanceDto(character.getInstance(), true)
+                : null);
+
+            dto.setMaintainer(character.getMaintainer() != null
+                ? userAccountService.getMaintainerDto(character.getMaintainer(),
+                    true)
+                : null);
+
+            dto.setCharacterGroup(character.getCharacterGroup() != null
+                ? getCharacterGroupDto(character.getCharacterGroup(), true)
+                : null);
+        }
 
         return dto;
     }
@@ -654,18 +668,40 @@ public class CharacterService
     protected CharacterGroupDto getCharacterGroupDto(CharacterGroup cg)
         throws Exception
     {
+        return getCharacterGroupDto(cg, false);
+    }
+
+    protected CharacterGroupDto getCharacterGroupDto(CharacterGroup cg,
+        Boolean skipNested) throws Exception
+    {
         CharacterGroupDto dto = new CharacterGroupDto();
 
         dto.setId(cg.getId());
-        dto.setInstanceId(
-            cg.getInstance() != null ? cg.getInstance().getId() : null);
+
         dto.setName(cg.getName());
         dto.setDescription(cg.getDescription());
         dto.setColorPrimary(cg.getColorPrimary());
-        dto.setCharacterIds(Optional.ofNullable(cg.getCharacters())
-            .map(Set::stream).orElseGet(Stream::empty).map(c -> c.getId())
-            .collect(Collectors.toSet()));
+
         dto.setCreateDate(cg.getCreateDate());
+
+        if (!skipNested)
+        {
+            dto.setInstance(cg.getInstance() != null
+                ? instanceService.getInstanceDto(cg.getInstance(), true)
+                : null);
+
+            dto.setCharacters(Optional.ofNullable(cg.getCharacters())
+                .map(Set::stream).orElseGet(Stream::empty).map(c -> {
+                    try
+                    {
+                        return getCharacterDto(c, true);
+                    }
+                    catch (Exception e)
+                    {
+                        throw new RuntimeException(e);
+                    }
+                }).collect(Collectors.toSet()));
+        }
 
         return dto;
     }

@@ -4,20 +4,22 @@ import com.fasterxml.jackson.databind.ser.FilterProvider;
 import com.fasterxml.jackson.databind.ser.impl.SimpleBeanPropertyFilter;
 import com.fasterxml.jackson.databind.ser.impl.SimpleFilterProvider;
 
-public class OwnerDtoFilter
+public class OwnerDtoFilters
 {
 
-    private static String[] simpleFilter = { "id", "username", "displayname",
+    protected static String[] simpleFilter = { "id", "username", "displayname",
             "avatarFilename" };
 
-    private static String[] fullFilter = { "id", "username", "displayname",
+    protected static String[] fullFilter = { "id", "username", "displayname",
             "avatarFilename", "email", "createDate", "instances" };
 
     public static FilterProvider simpleFilterProvider = new SimpleFilterProvider()
-        .addFilter("characterGroupFilter",
+        .addFilter("ownerFilter",
             SimpleBeanPropertyFilter.filterOutAllExcept(simpleFilter));
 
     public static FilterProvider fullFilterProvider = new SimpleFilterProvider()
-        .addFilter("characterGroupFilter",
-            SimpleBeanPropertyFilter.filterOutAllExcept(fullFilter));
+        .addFilter("ownerFilter",
+            SimpleBeanPropertyFilter.filterOutAllExcept(fullFilter))
+        .addFilter("instanceFilter", SimpleBeanPropertyFilter
+            .filterOutAllExcept(InstanceDtoFilters.simpleFilter));
 }

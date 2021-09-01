@@ -18,9 +18,9 @@ public class CharacterDto
     private Integer colorSecondary;
     private String avatarFilename;
 
-    private Long instanceId;
-    private Long maintainerId;
-    private Long characterGroupId;
+    private InstanceDto instance;
+    private MaintainerDto maintainer;
+    private CharacterGroupDto characterGroup;
 
     private LocalDateTime createDate;
 }

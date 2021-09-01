@@ -20,5 +20,5 @@ public class OwnerDto
 
     private LocalDateTime createDate;
 
-    private Set<Long> instanceIds;
+    private Set<InstanceDto> instances;
 }

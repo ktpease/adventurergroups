@@ -796,8 +796,6 @@ components:
           type: string
         avatarFilename:
           type: string
-        maintainer:
-          $ref: '#/components/schemas/MaintainerSimple'
 
     CharacterFull:
       allOf:
@@ -809,6 +807,8 @@ components:
                 format: date-time
               instance:
                 $ref: '#/components/schemas/InstanceSimple'
+              maintainer:
+                $ref: '#/components/schemas/MaintainerSimple'
               characterGroup:
                 $ref: '#/components/schemas/CharacterGroupSimple'
 

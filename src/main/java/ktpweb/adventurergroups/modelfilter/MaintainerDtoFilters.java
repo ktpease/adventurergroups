@@ -4,21 +4,26 @@ import com.fasterxml.jackson.databind.ser.FilterProvider;
 import com.fasterxml.jackson.databind.ser.impl.SimpleBeanPropertyFilter;
 import com.fasterxml.jackson.databind.ser.impl.SimpleFilterProvider;
 
-public class MaintainerDtoFilter
+public class MaintainerDtoFilters
 {
 
-    private static String[] simpleFilter = { "id", "isRegistered", "username",
+    protected static String[] simpleFilter = { "id", "isRegistered", "username",
             "displayname", "avatarFilename" };
 
-    private static String[] fullFilter = { "id", "isRegistered", "username",
+    protected static String[] fullFilter = { "id", "isRegistered", "username",
             "displayname", "avatarFilename", "email", "inviteToken",
             "createDate", "instance", "characters" };
 
     public static FilterProvider simpleFilterProvider = new SimpleFilterProvider()
-        .addFilter("characterGroupFilter",
+        .addFilter("maintainerFilter",
             SimpleBeanPropertyFilter.filterOutAllExcept(simpleFilter));
 
     public static FilterProvider fullFilterProvider = new SimpleFilterProvider()
-        .addFilter("characterGroupFilter",
-            SimpleBeanPropertyFilter.filterOutAllExcept(fullFilter));
+        .addFilter("maintainerFilter",
+            SimpleBeanPropertyFilter.filterOutAllExcept(fullFilter))
+        .addFilter("instanceFilter",
+            SimpleBeanPropertyFilter
+                .filterOutAllExcept(InstanceDtoFilters.simpleFilter))
+        .addFilter("characterFilter", SimpleBeanPropertyFilter
+            .filterOutAllExcept(CharacterDtoFilters.simpleFilter));
 }

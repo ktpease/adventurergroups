@@ -54,7 +54,7 @@ class UserAccountServiceTests
 
 		// Create a new owner.
 		OwnerDto testOwner = userAccountService.createOwner("testowner",
-			"testpassword", "testemail", null);
+			"testpassword", "testemail");
 
 		assertNotNull(testOwner.getId(),
 			"Cannot create Test Owner in database");
@@ -62,20 +62,20 @@ class UserAccountServiceTests
 			"Test Owner does not have correct username");
 
 		assertDoesNotThrow(() -> userAccountService.createOwner("testowner2",
-			"testpassword", "testemail2", null),
+			"testpassword", "testemail2"),
 			"Cannot create separate owner");
 
 		// Fail to create an owner with an invalid username.
 		exception = assertThrows(
 			UserAccountServiceException.class, () -> userAccountService
-				.createOwner("", "testpassword", null, null),
+				.createOwner("", "testpassword", null),
 			"Should not create second Test Owner with no username.");
 		assertEquals(exception.getCode(),
 			UserAccountServiceException.Codes.INVALID_USERNAME);
 
 		// Fail to create an owner with an invalid password.
 		exception = assertThrows(UserAccountServiceException.class,
-			() -> userAccountService.createOwner("testowner2", "", null, null),
+			() -> userAccountService.createOwner("testowner2", "", null),
 			"Should not create second Test Owner with bad password.");
 		assertEquals(exception.getCode(),
 			UserAccountServiceException.Codes.INVALID_PASSWORD);
@@ -83,7 +83,7 @@ class UserAccountServiceTests
 		// Fail to create a new owner with the same username as another owner.
 		exception = assertThrows(UserAccountServiceException.class,
 			() -> userAccountService.createOwner("testowner", "testpassword",
-				null, null),
+				null),
 			"Should not create Owner with same username as Test Owner");
 		assertEquals(exception.getCode(),
 			UserAccountServiceException.Codes.ACCOUNT_ALREADY_EXISTS);
@@ -91,7 +91,7 @@ class UserAccountServiceTests
 		// Fail to create a new owner with the same email as another owner.
 		exception = assertThrows(UserAccountServiceException.class,
 			() -> userAccountService.createOwner("testowner2", "testpassword",
-				"testemail", null),
+				"testemail"),
 			"Should not create Owner with same non-null email as Test Owner");
 		assertEquals(exception.getCode(),
 			UserAccountServiceException.Codes.ACCOUNT_ALREADY_EXISTS);
@@ -104,7 +104,7 @@ class UserAccountServiceTests
 
 		// Create a new owner, instance, and character.
 		OwnerDto testOwner = userAccountService.createOwner("testowner",
-			"testpassword", "testemail", null);
+			"testpassword", "testemail");
 
 		InstanceDto testInstance = instanceService.createInstance(testOwner,
 			"test");
@@ -117,7 +117,7 @@ class UserAccountServiceTests
 
 		assertNotNull(testMaintainerForInstance.getId(),
 			"Cannot create Test Maintainer (instance) in database");
-		assertEquals(testMaintainerForInstance.getParentInstanceId(),
+		assertEquals(testMaintainerForInstance.getInstance().getId(),
 			testInstance.getId(),
 			"Test Maintainer (instance) does not have correct instance");
 
@@ -149,7 +149,7 @@ class UserAccountServiceTests
 
 		// Create a new owner, instance.
 		OwnerDto testOwner = userAccountService.createOwner("testowner",
-			"testpassword", "testowneremail", null);
+			"testpassword", "testowneremail");
 
 		InstanceDto testInstance = instanceService.createInstance(testOwner,
 			"test");
@@ -164,7 +164,7 @@ class UserAccountServiceTests
 
 		assertNotNull(testRegisteredMaintainer.getId(),
 			"Cannot register maintainer in database");
-		assertEquals(testRegisteredMaintainer.getParentInstanceId(),
+		assertEquals(testRegisteredMaintainer.getInstance().getId(),
 			testInstance.getId(),
 			"Test Maintainer does not have correct instance");
 
