@@ -10,21 +10,23 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.LocalDateTime;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase.Replace;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.annotation.DirtiesContext.ClassMode;
 import org.springframework.test.context.ActiveProfiles;
 
 import ktpweb.adventurergroups.exception.InstanceServiceException;
 import ktpweb.adventurergroups.model.InstanceDto;
 import ktpweb.adventurergroups.model.OwnerDto;
-import ktpweb.adventurergroups.repository.CharacterRepository;
-import ktpweb.adventurergroups.repository.InstanceRepository;
-import ktpweb.adventurergroups.repository.UserAccountRepository;
 
 @SpringBootTest
 @ActiveProfiles("test")
+@DirtiesContext(classMode = ClassMode.BEFORE_EACH_TEST_METHOD)
+@AutoConfigureTestDatabase(replace = Replace.ANY)
 class InstanceServiceTests
 {
     @Autowired
@@ -32,23 +34,6 @@ class InstanceServiceTests
 
     @Autowired
     private UserAccountService userAccountService;
-
-    @Autowired
-    private UserAccountRepository userAccountRepository;
-
-    @Autowired
-    private InstanceRepository instanceRepository;
-
-    @Autowired
-    private CharacterRepository characterRepository;
-
-    @BeforeEach
-    void beforeEach()
-    {
-        userAccountRepository.deleteAll();
-        instanceRepository.deleteAll();
-        characterRepository.deleteAll();
-    }
 
     @Test
     void createInstanceTests() throws Exception

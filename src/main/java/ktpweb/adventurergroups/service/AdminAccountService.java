@@ -38,9 +38,6 @@ public class AdminAccountService
     public AdminAccountDto createAdmin(String username, String password,
         String email, String displayname) throws AdminAccountServiceException
     {
-        log.info("Attempting to create Admin account with username: {}",
-            username);
-
         // Invalid username.
         if (!StringUtils.hasText(username))
         {
@@ -139,7 +136,6 @@ public class AdminAccountService
                 AdminAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
 
-        // Check if the account exists.
         if (accountEntity == null)
         {
             throw generateException(
@@ -147,9 +143,7 @@ public class AdminAccountService
                 AdminAccountServiceException.Codes.ACCOUNT_NOT_FOUND);
         }
 
-        log.info("Found Admin account with id: {}", accountEntity.getId());
-
-        // return a full DTO.
+        // Return full DTO.
         try
         {
             return getAdminAccountDto(accountEntity);
@@ -189,7 +183,6 @@ public class AdminAccountService
                 AdminAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
 
-        // Check if the account exists.
         if (accountEntity == null)
         {
             throw generateException(
@@ -249,7 +242,6 @@ public class AdminAccountService
                 AdminAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
 
-        // Check if the account exists.
         if (accountEntity == null)
         {
             throw generateException(

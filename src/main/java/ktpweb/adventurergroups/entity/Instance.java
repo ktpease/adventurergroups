@@ -35,7 +35,7 @@ public class Instance
 
     @Column(nullable = false)
     private Boolean active = true;
-    
+
     @Column(nullable = false)
     private Boolean deleted = false;
 
@@ -52,15 +52,15 @@ public class Instance
     @JoinColumn(name = "owner_id", nullable = false)
     private UserAccount owner;
 
-    @OneToMany(mappedBy = "parentInstance", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "parentInstance", fetch = FetchType.LAZY)
     @Fetch(FetchMode.SUBSELECT)
     private Set<UserAccount> maintainers;
-    
-    @OneToMany(mappedBy = "instance", cascade = CascadeType.ALL)
+
+    @OneToMany(mappedBy = "instance", fetch = FetchType.LAZY)
     @Fetch(FetchMode.SUBSELECT)
     private Set<Character> characters;
 
-    @OneToMany(mappedBy = "instance", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "instance", fetch = FetchType.LAZY)
     @Fetch(FetchMode.SUBSELECT)
     private Set<CharacterGroup> characterGroups;
 

@@ -34,7 +34,7 @@ public class CharacterGroup
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "instance_id")
+    @JoinColumn(name = "instance_id", nullable = false)
     private Instance instance;
 
     @Column(nullable = false)
@@ -48,7 +48,7 @@ public class CharacterGroup
 
     private Integer colorPrimary;
 
-    @OneToMany(mappedBy = "characterGroup", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "characterGroup", fetch = FetchType.LAZY)
     @Fetch(FetchMode.SUBSELECT)
     private Set<Character> characters;
 

@@ -8,11 +8,11 @@ public class MaintainerDtoFilters
 {
 
     protected static String[] simpleFilter = { "id", "isRegistered", "username",
-            "displayname", "avatarFilename" };
+            "displayname" };
 
     protected static String[] fullFilter = { "id", "isRegistered", "username",
-            "displayname", "avatarFilename", "email", "inviteToken",
-            "createDate", "instance", "characters" };
+            "displayname", "email", "inviteToken", "createDate", "instance",
+            "characters" };
 
     public static FilterProvider simpleFilterProvider = new SimpleFilterProvider()
         .addFilter("maintainerFilter",

@@ -426,7 +426,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CharacterSimple'
+              $ref: '#/components/schemas/CharacterUpdate'
       responses:
         '200':
           description: Success.
@@ -578,7 +578,7 @@ paths:
       summary: Create a new empty character group for the designated instance.
       responses:
         '201':
-          description: Successful creation of Character.
+          description: Successful creation of Character Group.
           content:
             application/json:
               schema:
@@ -631,7 +631,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CharacterGroupSimple'
+              $ref: '#/components/schemas/CharacterGroupUpdate'
       responses:
         '200':
           description: Success.
@@ -670,8 +670,6 @@ components:
         username:
           type: string
         displayname:
-          type: string
-        avatarFilename:
           type: string
 
     OwnerFull:
@@ -759,8 +757,6 @@ components:
           type: string
         displayname:
           type: string
-        avatarFilename:
-          type: string
 
     MaintainerFull:
       allOf:
@@ -794,8 +790,6 @@ components:
           type: string
         colorSecondary:
           type: string
-        avatarFilename:
-          type: string
 
     CharacterFull:
       allOf:
@@ -812,6 +806,22 @@ components:
               characterGroup:
                 $ref: '#/components/schemas/CharacterGroupSimple'
 
+    CharacterUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        colorPrimary:
+          type: string
+        colorSecondary:
+          type: string
+        maintainer:
+          $ref: '#/components/schemas/MaintainerSimple'
+        characterGroup:
+          $ref: '#/components/schemas/CharacterGroupSimple'
+              
     CharacterGroupSimple:
       type: object
       properties:
@@ -865,8 +875,6 @@ components:
         email:
           type: string
         displayName:
-          type: string
-        avatarFilename:
           type: string
 
     UserAccountNew:

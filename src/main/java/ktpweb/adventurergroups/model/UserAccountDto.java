@@ -9,5 +9,4 @@ public class UserAccountDto
     private String password;
     private String email;
     private String displayname;
-    private String avatarFilename;
 }

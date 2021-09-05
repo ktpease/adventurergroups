@@ -5,31 +5,26 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase.Replace;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.annotation.DirtiesContext;
+import org.springframework.test.annotation.DirtiesContext.ClassMode;
 import org.springframework.test.context.ActiveProfiles;
 
 import ktpweb.adventurergroups.exception.AdminAccountServiceException;
 import ktpweb.adventurergroups.model.AdminAccountDto;
-import ktpweb.adventurergroups.repository.AdminAccountRepository;
 
 @SpringBootTest
 @ActiveProfiles("test")
+@DirtiesContext(classMode = ClassMode.BEFORE_EACH_TEST_METHOD)
+@AutoConfigureTestDatabase(replace = Replace.ANY)
 class AdminAccountServiceTests
 {
 	@Autowired
 	private AdminAccountService adminAccountService;
-
-	@Autowired
-	private AdminAccountRepository adminAccountRepository;
-
-	@BeforeEach
-	void beforeEach()
-	{
-		adminAccountRepository.deleteAll();
-	}
 
 	@Test
 	void createAdminTests() throws Exception

@@ -40,8 +40,6 @@ public class CharacterServiceException extends Exception
         INVALID_INSTANCE_OBJECT,
         INSTANCE_INACTIVE,
         CREATOR_NOT_FOUND,
-        INVALID_CREATOR_OBJECT,
-        INVALID_CREATOR_ROLE,
         MAINTAINER_NOT_FOUND,
         INVALID_MAINTAINER_OBJECT,
         CHARACTER_GROUP_NOT_FOUND,

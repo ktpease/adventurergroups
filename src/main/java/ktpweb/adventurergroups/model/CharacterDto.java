@@ -16,7 +16,6 @@ public class CharacterDto
     private String description;
     private Integer colorPrimary;
     private Integer colorSecondary;
-    private String avatarFilename;
 
     private InstanceDto instance;
     private MaintainerDto maintainer;

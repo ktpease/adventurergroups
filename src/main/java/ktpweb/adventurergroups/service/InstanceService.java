@@ -61,9 +61,6 @@ public class InstanceService
                 InstanceServiceException.Codes.INVALID_OWNER_OBJECT);
         }
 
-        log.info("Attempting to create Instance for owner User Account id: {}",
-            owner.getId());
-
         UserAccount ownerEntity;
 
         try
@@ -162,9 +159,9 @@ public class InstanceService
     public InstanceDto retrieveInstance(Long instanceId)
         throws InstanceServiceException
     {
-        Instance instanceEntity;
-
         // Attempt to read from the database.
+        Instance instanceEntity;
+        
         try
         {
             instanceEntity = getInstanceEntity(instanceId);
@@ -177,15 +174,12 @@ public class InstanceService
                 InstanceServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
 
-        // Check if the account exists.
         if (instanceEntity == null)
         {
             throw generateException(
                 EXCEPTION_RETRIEVE + instanceId + ". Instance not found",
                 InstanceServiceException.Codes.INSTANCE_NOT_FOUND);
         }
-
-        log.info("Found Instance with id: {}", instanceEntity.getId());
 
         // Prepare collection objects and return a full DTO.
         try
@@ -214,8 +208,6 @@ public class InstanceService
             throw generateException("Attempted update of a null Instance",
                 InstanceServiceException.Codes.NULL_INSTANCE_OBJECT);
         }
-
-        log.info("Attempting to update Instance with id: {}", instance.getId());
 
         // Read instance from database.
         Instance instanceEntity;
@@ -286,9 +278,6 @@ public class InstanceService
                 InstanceServiceException.Codes.NULL_INSTANCE_OBJECT);
         }
 
-        log.info("Attempting to activate Instance with id: {}",
-            instance.getId());
-
         // Read instance from database.
         Instance instanceEntity;
 
@@ -357,9 +346,6 @@ public class InstanceService
                 InstanceServiceException.Codes.NULL_INSTANCE_OBJECT);
         }
 
-        log.info("Attempting to deactivate Instance with id: {}",
-            instance.getId());
-
         // Read instance from database.
         Instance instanceEntity;
 
@@ -421,8 +407,6 @@ public class InstanceService
     @Transactional
     public void deleteInstance(Long instanceId) throws InstanceServiceException
     {
-        log.info("Attempting to delete Instance with id: {}", instanceId);
-
         // Read instance from database.
         Instance instanceEntity;
 

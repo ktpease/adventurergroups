@@ -32,7 +32,7 @@ public class Character
     private Boolean deleted = false;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "instance_id")
+    @JoinColumn(name = "instance_id", nullable = false)
     private Instance instance;
 
     @ManyToOne(fetch = FetchType.LAZY)

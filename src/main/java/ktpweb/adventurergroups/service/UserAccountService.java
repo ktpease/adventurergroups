@@ -56,9 +56,6 @@ public class UserAccountService
     public OwnerDto createOwner(String username, String password, String email)
         throws UserAccountServiceException
     {
-        log.info("Attempting to create Owner account with username: {}",
-            username);
-
         // Invalid username.
         if (!StringUtils.hasText(username))
         {
@@ -165,7 +162,6 @@ public class UserAccountService
                 UserAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
 
-        // Check if the account exists.
         if (accountEntity == null)
         {
             throw generateException(
@@ -180,8 +176,6 @@ public class UserAccountService
                 EXCEPTION_OWNER_RETRIEVE + userId + ". Invalid role",
                 UserAccountServiceException.Codes.INVALID_ROLE);
         }
-
-        log.info("Found Owner account with id: {}", accountEntity.getId());
 
         // Prepare collection objects and return a full DTO.
         try
@@ -204,6 +198,7 @@ public class UserAccountService
     public OwnerDto updateOwner(OwnerDto owner)
         throws UserAccountServiceException
     {
+        // Attempt to read from the database.
         if (owner == null)
         {
             throw generateException("Attempted update of a null Owner account",
@@ -212,7 +207,6 @@ public class UserAccountService
 
         UserAccount accountEntity;
 
-        // Attempt to read from the database.
         try
         {
             accountEntity = getUserAccountEntity(owner.getId());
@@ -225,7 +219,6 @@ public class UserAccountService
                 UserAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
 
-        // Check if the account exists.
         if (accountEntity == null)
         {
             throw generateException(
@@ -280,9 +273,9 @@ public class UserAccountService
     @Transactional
     public void deleteOwner(Long userId) throws UserAccountServiceException
     {
-        UserAccount accountEntity;
-
         // Attempt to read from the database.
+        UserAccount accountEntity;
+        
         try
         {
             accountEntity = getUserAccountEntity(userId);
@@ -295,7 +288,6 @@ public class UserAccountService
                 UserAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
 
-        // Check if the account exists.
         if (accountEntity == null)
         {
             throw generateException(
@@ -356,10 +348,6 @@ public class UserAccountService
                 UserAccountServiceException.Codes.INVALID_INSTANCE_OBJECT);
         }
 
-        log.info(
-            "Attempting to create unregistered Maintainer account on instance id: {}",
-            parentInstance.getId());
-
         Instance instanceEntity;
 
         try
@@ -406,8 +394,7 @@ public class UserAccountService
         log.info("Created unregistered Maintainer account with id: {}",
             accountEntity.getId());
 
-        // Update inverse side of Maintainer-Instance relationship because
-        // it doesn't automatically do that?!?!
+        // Update inverse side of Maintainer-Instance relationship
         Set<UserAccount> maintainerList = instanceEntity.getMaintainers();
 
         if (maintainerList == null)
@@ -443,10 +430,6 @@ public class UserAccountService
                 "Attempted creation of an unregistered Maintainer acount on a null Character",
                 UserAccountServiceException.Codes.INVALID_CHARACTER_OBJECT);
         }
-
-        log.info(
-            "Attempting to create unregistered Maintainer account for Character id: {}",
-            character.getId());
 
         Character characterEntity;
 
@@ -519,8 +502,7 @@ public class UserAccountService
         log.info("Created unregistered Maintainer account with id: {}",
             accountEntity.getId());
 
-        // Update inverse side of Maintainer-Instance relationship because
-        // it doesn't automatically do that?!?!
+        // Update inverse side of Maintainer-Instance relationship
         Set<UserAccount> maintainerList = instanceEntity.getMaintainers();
 
         if (maintainerList == null)
@@ -557,10 +539,6 @@ public class UserAccountService
                 "Attempted registration of a null Maintainer account",
                 UserAccountServiceException.Codes.NULL_ACCOUNT_OBJECT);
         }
-
-        log.info(
-            "Attempting to register Maintainer account id: {} with username: {}",
-            unregisteredMaintainer.getId(), username);
 
         Instance instanceEntity;
 
@@ -718,9 +696,9 @@ public class UserAccountService
     public MaintainerDto retrieveMaintainer(Long userId)
         throws UserAccountServiceException
     {
-        UserAccount accountEntity;
-
         // Attempt to read from the database.
+        UserAccount accountEntity;
+        
         try
         {
             accountEntity = getUserAccountEntity(userId);
@@ -733,7 +711,6 @@ public class UserAccountService
                 UserAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
 
-        // Check if the account exists.
         if (accountEntity == null)
         {
             throw generateException(
@@ -751,8 +728,6 @@ public class UserAccountService
                 EXCEPTION_MAINTAINER_RETRIEVE + userId + ". Invalid role",
                 UserAccountServiceException.Codes.INVALID_ROLE);
         }
-
-        log.info("Found Maintainer account with id: {}", accountEntity.getId());
 
         // Prepare collection objects and return a full DTO.
         try
@@ -775,6 +750,7 @@ public class UserAccountService
     public MaintainerDto updateMaintainer(MaintainerDto maintainer)
         throws UserAccountServiceException
     {
+        // Attempt to read from the database.
         if (maintainer == null)
         {
             throw generateException(
@@ -784,7 +760,6 @@ public class UserAccountService
 
         UserAccount accountEntity;
 
-        // Attempt to read from the database.
         try
         {
             accountEntity = getUserAccountEntity(maintainer.getId());
@@ -797,7 +772,6 @@ public class UserAccountService
                 UserAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
 
-        // Check if the account exists.
         if (accountEntity == null)
         {
             throw generateException(
@@ -853,9 +827,9 @@ public class UserAccountService
     @Transactional
     public void deleteMaintainer(Long userId) throws UserAccountServiceException
     {
+        // Attempt to read from the database.
         UserAccount accountEntity;
 
-        // Attempt to read from the database.
         try
         {
             accountEntity = getUserAccountEntity(userId);
@@ -868,7 +842,6 @@ public class UserAccountService
                 UserAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
 
-        // Check if the account exists.
         if (accountEntity == null)
         {
             throw generateException(
@@ -887,7 +860,11 @@ public class UserAccountService
                 UserAccountServiceException.Codes.INVALID_ROLE);
         }
 
-        // TODO: Unassign all associated Characters.
+        // Unassign all of the group's characters, if there are any.
+        for (Character c : accountEntity.getCharacters())
+        {
+            c.setMaintainer(null);
+        }
 
         // Attempt to soft-delete user account.
         accountEntity.setDeleted(true);

@@ -54,7 +54,7 @@ public class UserAccount
     private String displayname;
 
     // Multi-instance (Owners)
-    @OneToMany(mappedBy = "owner", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "owner", fetch = FetchType.LAZY)
     @Fetch(FetchMode.SUBSELECT)
     private Set<Instance> instances;
 
@@ -63,7 +63,7 @@ public class UserAccount
     @JoinColumn(name = "instance_id")
     private Instance parentInstance;
 
-    @OneToMany(mappedBy = "maintainer", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "maintainer", fetch = FetchType.LAZY)
     @Fetch(FetchMode.SUBSELECT)
     private Set<Character> characters;
 

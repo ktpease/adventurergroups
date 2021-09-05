@@ -8,11 +8,11 @@ public class CharacterDtoFilters
 {
 
     protected static String[] simpleFilter = { "id", "name", "description",
-            "colorPrimary", "colorSecondary", "avatarFilename", };
+            "colorPrimary", "colorSecondary", };
 
     protected static String[] fullFilter = { "id", "name", "description",
-            "colorPrimary", "colorSecondary", "avatarFilename", "maintainer",
-            "createDate", "instance", "characterGroup" };
+            "colorPrimary", "colorSecondary", "maintainer", "createDate",
+            "instance", "characterGroup" };
 
     public static FilterProvider simpleFilterProvider = new SimpleFilterProvider()
         .addFilter("characterFilter",

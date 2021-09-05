@@ -16,7 +16,6 @@ public class MaintainerDto
     private String username;
     private String email;
     private String displayname;
-    private String avatarFilename;
 
     private LocalDateTime createDate;
 
