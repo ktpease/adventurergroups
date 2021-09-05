@@ -51,6 +51,8 @@ public class CharacterService
     private final String EXCEPTION_CHARACTER_UPDATE = "Cannot update Character with id: ";
     private final String EXCEPTION_CHARACTER_DELETE = "Cannot delete Character with id: ";
 
+    private final String EXCEPTION_CHARACTER_CREATE_MAINTAINER = "Cannot create Character for Maintainer id: ";
+
     private final String EXCEPTION_CHARACTER_RETRIEVE_INSTANCE = "Cannot retrieve Characters for instance id: ";
     private final String EXCEPTION_CHARACTER_RETRIEVE_MAINTAINER = "Cannot retrieve Characters for maintainer id: ";
     private final String EXCEPTION_CHARACTER_RETRIEVE_GROUP = "Cannot retrieve Characters for group id: ";
@@ -316,6 +318,72 @@ public class CharacterService
         }
 
         log.info("Deleted Character with id: {}", characterId);
+    }
+
+    @Transactional
+    public CharacterDto createCharacterForMaintainer(MaintainerDto maintainer)
+        throws CharacterServiceException
+    {
+        // Load and validate Maintainer.
+        if (maintainer == null)
+        {
+            throw generateException(
+                "Attempted creation of character for a null user account",
+                CharacterServiceException.Codes.INVALID_MAINTAINER_OBJECT);
+        }
+
+        UserAccount maintainerEntity;
+
+        try
+        {
+            maintainerEntity = userAccountService
+                .getUserAccountEntity(maintainer);
+        }
+        catch (Exception ex)
+        {
+            throw generateException(
+                EXCEPTION_CHARACTER_CREATE_MAINTAINER + maintainer.getId()
+                    + ". Error reading user account from database",
+                CharacterServiceException.Codes.DATABASE_ERROR_READ, ex);
+        }
+
+        // Generate and save database entity.
+        Character characterEntity = new Character();
+
+        characterEntity.setMaintainer(maintainerEntity);
+        characterEntity.setInstance(maintainerEntity.getParentInstance());
+        characterEntity.setName(DEFAULT_CHARACTER_NAME);
+        characterEntity.setDescription("");
+        characterEntity.setCreateDate(LocalDateTime.now());
+
+        try
+        {
+            characterEntity = characterRepository.save(characterEntity);
+        }
+        catch (Exception ex)
+        {
+            throw generateException(
+                EXCEPTION_CHARACTER_CREATE_MAINTAINER + maintainer.getId()
+                    + ". Error writing to database",
+                CharacterServiceException.Codes.DATABASE_ERROR_WRITE, ex);
+        }
+
+        log.info("Created Character with id: {} for maintainer with id: {}",
+            characterEntity.getId(), maintainer.getId());
+
+        // Return full DTO.
+        try
+        {
+            return getCharacterDto(characterEntity);
+        }
+        catch (Exception ex)
+        {
+            throw generateException(
+                EXCEPTION_CHARACTER_MODEL + characterEntity.getId()
+                    + ". Error reading from database",
+                CharacterServiceException.Codes.DATABASE_ERROR_READ_MAPPING,
+                ex);
+        }
     }
 
     @Transactional
