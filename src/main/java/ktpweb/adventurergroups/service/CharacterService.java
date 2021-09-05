@@ -91,14 +91,6 @@ public class CharacterService
                 CharacterServiceException.Codes.INSTANCE_NOT_FOUND);
         }
 
-        if (!instanceEntity.getActive())
-        {
-            throw generateException(
-                EXCEPTION_CHARACTER_CREATE + instance.getId()
-                    + ". Instance is inactive",
-                CharacterServiceException.Codes.INSTANCE_INACTIVE);
-        }
-
         // Generate and save database entity.
         Character characterEntity = new Character();
 
@@ -574,14 +566,6 @@ public class CharacterService
                 EXCEPTION_GROUP_CREATE + instance.getId()
                     + ". Instance not found",
                 CharacterServiceException.Codes.INSTANCE_NOT_FOUND);
-        }
-
-        if (!instanceEntity.getActive())
-        {
-            throw generateException(
-                EXCEPTION_GROUP_CREATE + instance.getId()
-                    + ". Instance is inactive",
-                CharacterServiceException.Codes.INSTANCE_INACTIVE);
         }
 
         // Generate and save database entity.

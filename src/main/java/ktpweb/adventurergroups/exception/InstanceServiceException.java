@@ -39,6 +39,7 @@ public class InstanceServiceException extends Exception
         OWNER_NOT_FOUND,
         INVALID_OWNER_OBJECT,
         INVALID_OWNER_ROLE,
-        INVALID_SUBDOMAINNAME
+        INVALID_SUBDOMAINNAME,
+        INVALID_ACTIVE
     }
 }
