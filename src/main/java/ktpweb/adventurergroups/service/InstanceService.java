@@ -50,7 +50,7 @@ public class InstanceService
     private final String EXCEPTION_ACTIVATE = "Cannot activate Instance with id: ";
     private final String EXCEPTION_DEACTIVATE = "Cannot deactivate Instance with id: ";
 
-    private final String EXCEPTION_RETRIEVE_OWNER = "Cannot retrieve Instances for user account with id: ";
+    private final String EXCEPTION_RETRIEVE_FOR_OWNER = "Cannot retrieve Instances for user account with id: ";
 
     private final String EXCEPTION_MODEL = "Cannot return model for Instance with id: ";
 
@@ -146,6 +146,19 @@ public class InstanceService
         }
     }
 
+    public InstanceDto createInstance(OwnerDto owner, InstanceDto newInstance)
+        throws InstanceServiceException
+    {
+        if (newInstance == null)
+        {
+            throw generateException(
+                "Attempted creation of an Instance with a null object",
+                InstanceServiceException.Codes.NULL_INSTANCE_OBJECT);
+        }
+
+        return createInstance(owner, newInstance.getSubdomainName());
+    }
+
     @Transactional
     public InstanceDto retrieveInstance(Long instanceId)
         throws InstanceServiceException
@@ -187,11 +200,11 @@ public class InstanceService
     }
 
     @Transactional
-    public InstanceDto updateInstance(InstanceDto instance)
-        throws InstanceServiceException
+    public InstanceDto updateInstance(Long instanceId,
+        InstanceDto instanceUpdate) throws InstanceServiceException
     {
         // Attempt to read from the database.
-        if (instance == null)
+        if (instanceUpdate == null)
         {
             throw generateException("Attempted update of a null Instance",
                 InstanceServiceException.Codes.NULL_INSTANCE_OBJECT);
@@ -201,52 +214,49 @@ public class InstanceService
 
         try
         {
-            instanceEntity = getInstanceEntity(instance);
+            instanceEntity = getInstanceEntity(instanceId);
         }
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_UPDATE + instance.getId()
-                    + ". Error reading from database",
+                EXCEPTION_UPDATE + instanceId + ". Error reading from database",
                 InstanceServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
 
         if (instanceEntity == null)
         {
             throw generateException(
-                EXCEPTION_UPDATE + instance.getId()
+                EXCEPTION_UPDATE + instanceId
                     + ". Instance not found in database",
                 InstanceServiceException.Codes.INSTANCE_NOT_FOUND);
         }
 
         // Check for invalid subdomain name.
-        if (!StringUtils.hasText(instance.getSubdomainName()))
+        if (!StringUtils.hasText(instanceUpdate.getSubdomainName()))
         {
             throw generateException(
-                EXCEPTION_UPDATE + instance.getId()
-                    + ". Invalid subdomain name",
+                EXCEPTION_UPDATE + instanceId + ". Invalid subdomain name",
                 InstanceServiceException.Codes.INVALID_SUBDOMAINNAME);
         }
 
-        if (instanceExists(instance.getSubdomainName()))
+        if (instanceExists(instanceUpdate.getSubdomainName()))
         {
             throw generateException(
-                EXCEPTION_UPDATE + instance.getId()
-                    + ". Subdomain already exists",
+                EXCEPTION_UPDATE + instanceId + ". Subdomain already exists",
                 InstanceServiceException.Codes.INSTANCE_ALREADY_EXISTS);
         }
 
         // Attempt to modify and save instance.
-        instanceEntity.setSubdomainName(instance.getSubdomainName());
-        instanceEntity.setDisplayName(instance.getDisplayName());
-        instanceEntity.setDescription(instance.getDescription());
+        instanceEntity.setSubdomainName(instanceUpdate.getSubdomainName());
+        instanceEntity.setDisplayName(instanceUpdate.getDisplayName());
+        instanceEntity.setDescription(instanceUpdate.getDescription());
 
-        if (instance.getActive() != null
-            && instanceEntity.getActive() != instance.getActive())
+        if (instanceUpdate.getActive() != null
+            && instanceEntity.getActive() != instanceUpdate.getActive())
         {
-            instanceEntity.setActive(instance.getActive());
+            instanceEntity.setActive(instanceUpdate.getActive());
 
-            if (instance.getActive())
+            if (instanceUpdate.getActive())
             {
                 instanceEntity.setLastActivateDate(LocalDateTime.now());
             }
@@ -263,12 +273,11 @@ public class InstanceService
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_UPDATE + instance.getId()
-                    + ". Error writing to database",
+                EXCEPTION_UPDATE + instanceId + ". Error writing to database",
                 InstanceServiceException.Codes.DATABASE_ERROR_WRITE, ex);
         }
 
-        log.info("Updated Instance with id: {}", instanceEntity.getId());
+        log.info("Updated Instance with id: {}", instanceId);
 
         // Return full DTO.
         try
@@ -278,8 +287,7 @@ public class InstanceService
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_MODEL + instance.getId()
-                    + ". Error reading from database",
+                EXCEPTION_MODEL + instanceId + ". Error reading from database",
                 InstanceServiceException.Codes.DATABASE_ERROR_READ_MAPPING, ex);
         }
     }
@@ -499,7 +507,7 @@ public class InstanceService
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_RETRIEVE_OWNER + owner.getId()
+                EXCEPTION_RETRIEVE_FOR_OWNER + owner.getId()
                     + ". Error reading user account from database",
                 InstanceServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
@@ -507,14 +515,15 @@ public class InstanceService
         if (ownerEntity == null)
         {
             throw generateException(
-                EXCEPTION_CREATE + owner.getId() + ". User Account not found",
+                EXCEPTION_RETRIEVE_FOR_OWNER + owner.getId()
+                    + ". User Account not found",
                 InstanceServiceException.Codes.OWNER_NOT_FOUND);
         }
 
         if (ownerEntity.getRole() != UserAccountRoles.USER_ROLE_OWNER)
         {
             throw generateException(
-                EXCEPTION_CREATE + owner.getId()
+                EXCEPTION_RETRIEVE_FOR_OWNER + owner.getId()
                     + ". User Account is not an owner role",
                 InstanceServiceException.Codes.INVALID_OWNER_ROLE);
         }
@@ -529,7 +538,7 @@ public class InstanceService
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_RETRIEVE_OWNER + owner.getId()
+                EXCEPTION_RETRIEVE_FOR_OWNER + owner.getId()
                     + ". Error reading from database",
                 InstanceServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
@@ -552,7 +561,7 @@ public class InstanceService
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_RETRIEVE_OWNER + owner.getId()
+                EXCEPTION_RETRIEVE_FOR_OWNER + owner.getId()
                     + ". Error reading from database",
                 InstanceServiceException.Codes.DATABASE_ERROR_READ_MAPPING, ex);
         }

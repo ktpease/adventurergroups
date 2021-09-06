@@ -7,7 +7,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.hibernate.Hibernate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Example;
 import org.springframework.data.domain.ExampleMatcher;
@@ -16,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import ktpweb.adventurergroups.entity.Character;
+import ktpweb.adventurergroups.entity.CharacterGroup;
 import ktpweb.adventurergroups.entity.Instance;
 import ktpweb.adventurergroups.entity.UserAccount;
 import ktpweb.adventurergroups.exception.UserAccountServiceException;
@@ -99,6 +99,7 @@ public class UserAccountService
         UserAccount accountEntity = new UserAccount();
 
         accountEntity.setUsername(username);
+        // TODO: Password hashing.
         accountEntity.setPassword(password);
         accountEntity.setEmail(email);
         accountEntity.setDisplayname(username);
@@ -122,8 +123,6 @@ public class UserAccountService
 
         try
         {
-            Hibernate.initialize(accountEntity.getInstances());
-
             return getOwnerDto(accountEntity);
         }
         catch (Exception ex)
@@ -139,6 +138,13 @@ public class UserAccountService
     public OwnerDto createOwner(UserAccountDto newAccount)
         throws UserAccountServiceException
     {
+        if (newAccount == null)
+        {
+            throw generateException(
+                "Attempted creation of an Owner account with a null object",
+                UserAccountServiceException.Codes.NULL_ACCOUNT_OBJECT);
+        }
+
         return createOwner(newAccount.getUsername(), newAccount.getPassword(),
             newAccount.getEmail());
     }
@@ -177,11 +183,9 @@ public class UserAccountService
                 UserAccountServiceException.Codes.INVALID_ROLE);
         }
 
-        // Prepare collection objects and return a full DTO.
+        // Return full DTO.
         try
         {
-            Hibernate.initialize(accountEntity.getInstances());
-
             return getOwnerDto(accountEntity);
         }
         catch (Exception ex)
@@ -195,11 +199,11 @@ public class UserAccountService
     }
 
     @Transactional
-    public OwnerDto updateOwner(OwnerDto owner)
+    public OwnerDto updateOwner(Long userId, UserAccountDto accountUpdate)
         throws UserAccountServiceException
     {
         // Attempt to read from the database.
-        if (owner == null)
+        if (accountUpdate == null)
         {
             throw generateException("Attempted update of a null Owner account",
                 UserAccountServiceException.Codes.NULL_ACCOUNT_OBJECT);
@@ -209,12 +213,12 @@ public class UserAccountService
 
         try
         {
-            accountEntity = getUserAccountEntity(owner.getId());
+            accountEntity = getUserAccountEntity(userId);
         }
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_OWNER_UPDATE + owner.getId()
+                EXCEPTION_OWNER_UPDATE + userId
                     + ". Error reading from database",
                 UserAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
@@ -222,8 +226,7 @@ public class UserAccountService
         if (accountEntity == null)
         {
             throw generateException(
-                EXCEPTION_OWNER_UPDATE + owner.getId()
-                    + ". User account not found",
+                EXCEPTION_OWNER_UPDATE + userId + ". User account not found",
                 UserAccountServiceException.Codes.ACCOUNT_NOT_FOUND);
         }
 
@@ -231,14 +234,128 @@ public class UserAccountService
         if (accountEntity.getRole() != UserAccountRoles.USER_ROLE_OWNER)
         {
             throw generateException(
-                EXCEPTION_OWNER_UPDATE + owner.getId() + ". Invalid role",
+                EXCEPTION_OWNER_UPDATE + userId + ". Invalid role",
                 UserAccountServiceException.Codes.INVALID_ROLE);
         }
 
+        // Updating username and/or email, check for collisions!
+        if (accountUpdate.getUsername() != null
+            || accountUpdate.getEmail() != null)
+        {
+            if (accountUpdate.getUsername() != null
+                && !StringUtils.hasText(accountUpdate.getUsername()))
+            {
+                throw generateException(
+                    EXCEPTION_OWNER_UPDATE + userId + ". Invalid username",
+                    UserAccountServiceException.Codes.INVALID_USERNAME);
+            }
+
+            if (accountUpdate.getEmail() != null
+                && !StringUtils.hasText(accountUpdate.getEmail()))
+            {
+                throw generateException(
+                    EXCEPTION_OWNER_UPDATE + userId + ". Invalid email",
+                    UserAccountServiceException.Codes.INVALID_EMAIL);
+            }
+
+            Boolean accountExists;
+
+            // Check for owner.
+            try
+            {
+                accountExists = accountExistsInGlobal(
+                    StringUtils.hasText(accountUpdate.getUsername())
+                        ? accountUpdate.getUsername()
+                        : accountEntity.getUsername(),
+                    StringUtils.hasText(accountUpdate.getEmail())
+                        ? accountUpdate.getEmail()
+                        : accountEntity.getEmail());
+            }
+            catch (Exception ex)
+            {
+                throw generateException(EXCEPTION_OWNER_UPDATE + userId
+                    + ". Error checking for matching accounts from database",
+                    UserAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
+            }
+
+            if (accountExists)
+            {
+                throw generateException(
+                    "Another owner with the same username or non-null email already exists! Username = "
+                        + (StringUtils.hasText(accountUpdate.getUsername())
+                            ? accountUpdate.getUsername()
+                            : accountEntity.getUsername())
+                        + ", email = "
+                        + (StringUtils.hasText(accountUpdate.getEmail())
+                            ? accountUpdate.getEmail()
+                            : accountEntity.getEmail()),
+                    UserAccountServiceException.Codes.ACCOUNT_ALREADY_EXISTS);
+            }
+
+            // Check for each instance's maintainers
+            for (Instance i : accountEntity.getInstances())
+            {
+                try
+                {
+                    accountExists = accountExistsInInstance(
+                        StringUtils.hasText(accountUpdate.getUsername())
+                            ? accountUpdate.getUsername()
+                            : accountEntity.getUsername(),
+                        StringUtils.hasText(accountUpdate.getEmail())
+                            ? accountUpdate.getEmail()
+                            : accountEntity.getEmail(),
+                        i);
+                }
+                catch (Exception ex)
+                {
+                    throw generateException(EXCEPTION_OWNER_UPDATE + userId
+                        + ". Error checking for matching accounts from database",
+                        UserAccountServiceException.Codes.DATABASE_ERROR_READ,
+                        ex);
+                }
+
+                if (accountExists)
+                {
+                    throw generateException(
+                        "Another maintainer with the same username or non-null email already exists! Username = "
+                            + (StringUtils.hasText(accountUpdate.getUsername())
+                                ? accountUpdate.getUsername()
+                                : accountEntity.getUsername())
+                            + ", email = "
+                            + (StringUtils.hasText(accountUpdate.getEmail())
+                                ? accountUpdate.getEmail()
+                                : accountEntity.getEmail()),
+                        UserAccountServiceException.Codes.ACCOUNT_ALREADY_EXISTS);
+                }
+            }
+        }
+
         // Attempt to modify and save user account.
-        accountEntity.setUsername(owner.getUsername());
-        accountEntity.setEmail(owner.getEmail());
-        accountEntity.setDisplayname(owner.getDisplayname());
+
+        if (accountUpdate.getUsername() != null)
+        {
+            accountEntity.setUsername(accountUpdate.getUsername());
+        }
+        if (accountUpdate.getPassword() != null)
+        {
+            if (!StringUtils.hasText(accountUpdate.getPassword()))
+            {
+                throw generateException(
+                    EXCEPTION_OWNER_UPDATE + userId + ". Invalid password",
+                    UserAccountServiceException.Codes.INVALID_PASSWORD);
+            }
+
+            // TODO: Password hashing.
+            accountEntity.setPassword(accountUpdate.getPassword());
+        }
+        if (accountUpdate.getEmail() != null)
+        {
+            accountEntity.setEmail(accountUpdate.getEmail());
+        }
+        if (accountUpdate.getDisplayname() != null)
+        {
+            accountEntity.setDisplayname(accountUpdate.getDisplayname());
+        }
 
         try
         {
@@ -247,17 +364,15 @@ public class UserAccountService
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_OWNER_UPDATE + owner.getId()
-                    + ". Error writing to database",
+                EXCEPTION_OWNER_UPDATE + userId + ". Error writing to database",
                 UserAccountServiceException.Codes.DATABASE_ERROR_WRITE, ex);
         }
 
-        log.info("Updated Owner account with id: {}", owner.getId());
+        log.info("Updated Owner account with id: {}", userId);
 
+        // Return full DTO.
         try
         {
-            Hibernate.initialize(accountEntity.getInstances());
-
             return getOwnerDto(accountEntity);
         }
         catch (Exception ex)
@@ -275,7 +390,7 @@ public class UserAccountService
     {
         // Attempt to read from the database.
         UserAccount accountEntity;
-        
+
         try
         {
             accountEntity = getUserAccountEntity(userId);
@@ -303,8 +418,31 @@ public class UserAccountService
                 UserAccountServiceException.Codes.INVALID_ROLE);
         }
 
-        // TODO: Soft-delete all associated Instances, Characters, and
+        // Soft-delete all associated Instances, Maintainers, Characters, and
         // Character Groups.
+        for (Instance i : accountEntity.getInstances())
+        {
+            for (UserAccount m : i.getMaintainers())
+            {
+                m.setDeleted(true);
+                m.setDeleteDate(LocalDateTime.now());
+            }
+
+            for (Character c : i.getCharacters())
+            {
+                c.setDeleted(true);
+                c.setDeleteDate(LocalDateTime.now());
+            }
+
+            for (CharacterGroup cg : i.getCharacterGroups())
+            {
+                cg.setDeleted(true);
+                cg.setDeleteDate(LocalDateTime.now());
+            }
+
+            i.setDeleted(true);
+            i.setDeleteDate(LocalDateTime.now());
+        }
 
         // Attempt to soft-delete user account.
         accountEntity.setDeleted(true);
@@ -330,7 +468,6 @@ public class UserAccountService
 
     private final String EXCEPTION_MAINTAINER_CREATE_FOR_INSTANCE = "Cannot create Maintainer account on Instance id: ";
     private final String EXCEPTION_MAINTAINER_CREATE_FOR_CHARACTER = "Cannot create Maintainer account for Character id: ";
-    private final String EXCEPTION_MAINTAINER_REGISTER = "Cannot register Maintainer account with user id: ";
     private final String EXCEPTION_MAINTAINER_RETRIEVE = "Cannot retrieve Maintainer account with user id: ";
     private final String EXCEPTION_MAINTAINER_UPDATE = "Cannot update Maintainer account with user id: ";
     private final String EXCEPTION_MAINTAINER_DELETE = "Cannot delete Maintainer account with user id: ";
@@ -341,6 +478,7 @@ public class UserAccountService
     public MaintainerDto createUnregisteredMaintainer(
         InstanceDto parentInstance) throws UserAccountServiceException
     {
+        // Load and validate Instance.
         if (parentInstance == null)
         {
             throw generateException(
@@ -371,10 +509,11 @@ public class UserAccountService
                 UserAccountServiceException.Codes.INSTANCE_NOT_FOUND);
         }
 
-        // Generate database entity.
+        // Generate and save database entity.
         UserAccount accountEntity = new UserAccount();
 
         accountEntity.setRole(UserAccountRoles.USER_ROLE_UNREGISTERED);
+        // TODO: Generate random token.
         accountEntity.setInviteToken("newrandomtoken");
         accountEntity.setParentInstance(instanceEntity);
         accountEntity.setCreateDate(LocalDateTime.now());
@@ -394,20 +533,9 @@ public class UserAccountService
         log.info("Created unregistered Maintainer account with id: {}",
             accountEntity.getId());
 
-        // Update inverse side of Maintainer-Instance relationship
-        Set<UserAccount> maintainerList = instanceEntity.getMaintainers();
-
-        if (maintainerList == null)
-            maintainerList = new HashSet<UserAccount>();
-
-        maintainerList.add(accountEntity);
-
-        instanceEntity.setMaintainers(maintainerList);
-
+        // Return full DTO.
         try
         {
-            Hibernate.initialize(accountEntity.getCharacters());
-
             return getMaintainerDto(accountEntity);
         }
         catch (Exception ex)
@@ -424,6 +552,7 @@ public class UserAccountService
     public MaintainerDto createUnregisteredMaintainer(CharacterDto character)
         throws UserAccountServiceException
     {
+        // Load and validate Character and its Instance.
         if (character == null)
         {
             throw generateException(
@@ -476,16 +605,17 @@ public class UserAccountService
                 UserAccountServiceException.Codes.INVALID_INSTANCE_OBJECT);
         }
 
-        // Generate database entity.
+        // Generate and save database entity.
         UserAccount accountEntity = new UserAccount();
 
         accountEntity.setRole(UserAccountRoles.USER_ROLE_UNREGISTERED);
         // TODO: Generate randomized token.
         accountEntity.setInviteToken("newrandomtoken");
         accountEntity.setParentInstance(instanceEntity);
+        accountEntity.setCreateDate(LocalDateTime.now());
+
         accountEntity.setCharacters(Stream.of(characterEntity)
             .collect(Collectors.toCollection(HashSet::new)));
-        accountEntity.setCreateDate(LocalDateTime.now());
 
         try
         {
@@ -502,20 +632,9 @@ public class UserAccountService
         log.info("Created unregistered Maintainer account with id: {}",
             accountEntity.getId());
 
-        // Update inverse side of Maintainer-Instance relationship
-        Set<UserAccount> maintainerList = instanceEntity.getMaintainers();
-
-        if (maintainerList == null)
-            maintainerList = new HashSet<UserAccount>();
-
-        maintainerList.add(accountEntity);
-
-        instanceEntity.setMaintainers(maintainerList);
-
+        // Return full DTO.
         try
         {
-            Hibernate.initialize(accountEntity.getCharacters());
-
             return getMaintainerDto(accountEntity);
         }
         catch (Exception ex)
@@ -529,176 +648,12 @@ public class UserAccountService
     }
 
     @Transactional
-    public MaintainerDto registerMaintainer(
-        MaintainerDto unregisteredMaintainer, String username, String password,
-        String email, String displayname) throws UserAccountServiceException
-    {
-        if (unregisteredMaintainer == null)
-        {
-            throw generateException(
-                "Attempted registration of a null Maintainer account",
-                UserAccountServiceException.Codes.NULL_ACCOUNT_OBJECT);
-        }
-
-        Instance instanceEntity;
-
-        try
-        {
-            instanceEntity = instanceService.getInstanceEntity(
-                unregisteredMaintainer.getInstance().getId());
-        }
-        catch (Exception ex)
-        {
-            throw generateException(
-                EXCEPTION_MAINTAINER_REGISTER + unregisteredMaintainer.getId()
-                    + ". Error reading Instance from database",
-                UserAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
-        }
-
-        if (instanceEntity == null)
-        {
-            throw generateException(
-                EXCEPTION_MAINTAINER_REGISTER + unregisteredMaintainer.getId()
-                    + ". Invalid Instance object",
-                UserAccountServiceException.Codes.INVALID_INSTANCE_OBJECT);
-        }
-
-        // Invalid username.
-        if (!StringUtils.hasText(username))
-        {
-            throw generateException(
-                EXCEPTION_MAINTAINER_REGISTER + unregisteredMaintainer.getId()
-                    + ". Invalid username",
-                UserAccountServiceException.Codes.INVALID_USERNAME);
-        }
-
-        // Invalid password.
-        if (!StringUtils.hasText(password))
-        {
-            throw generateException(
-                EXCEPTION_MAINTAINER_REGISTER + unregisteredMaintainer.getId()
-                    + ". Invalid password",
-                UserAccountServiceException.Codes.INVALID_PASSWORD);
-        }
-
-        // Check to see if an account with the same username and email
-        // exists.
-
-        // Check for Owner.
-        UserAccount instanceOwnerEntity = instanceEntity.getOwner();
-        if (instanceOwnerEntity.getUsername().equalsIgnoreCase(username)
-            || (StringUtils.hasText(email)
-                && instanceOwnerEntity.getEmail().equalsIgnoreCase(email)))
-        {
-            throw generateException(
-                "Owner account with the same username or non-null email already exists! Username = "
-                    + username + ", email = " + email,
-                UserAccountServiceException.Codes.ACCOUNT_ALREADY_EXISTS);
-        }
-
-        // Check for other maintainers.
-        Boolean accountExists;
-
-        try
-        {
-            accountExists = accountExistsInInstance(username, email,
-                instanceEntity);
-        }
-        catch (Exception ex)
-        {
-            throw generateException(
-                EXCEPTION_MAINTAINER_REGISTER + unregisteredMaintainer.getId()
-                    + ". Error checking for matching accounts from database",
-                UserAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
-        }
-
-        if (accountExists)
-        {
-            throw generateException(
-                "Maintainer account with the same username or non-null email already exists! Username = "
-                    + username + ", email = " + email,
-                UserAccountServiceException.Codes.ACCOUNT_ALREADY_EXISTS);
-        }
-
-        // Read user account from database.
-        UserAccount accountEntity;
-
-        try
-        {
-            accountEntity = getUserAccountEntity(unregisteredMaintainer);
-        }
-        catch (Exception ex)
-        {
-            throw generateException(
-                EXCEPTION_MAINTAINER_REGISTER + unregisteredMaintainer.getId()
-                    + ". Error reading from database",
-                UserAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
-        }
-
-        // Check if we're editing the correct account.
-        if (accountEntity == null)
-        {
-            throw generateException(
-                EXCEPTION_MAINTAINER_REGISTER + unregisteredMaintainer.getId()
-                    + ". User account not found",
-                UserAccountServiceException.Codes.ACCOUNT_NOT_FOUND);
-        }
-
-        if (accountEntity.getRole() != UserAccountRoles.USER_ROLE_UNREGISTERED)
-        {
-            throw generateException(
-                EXCEPTION_MAINTAINER_REGISTER + unregisteredMaintainer.getId()
-                    + ". Invalid role",
-                UserAccountServiceException.Codes.INVALID_ROLE);
-        }
-
-        // Attempt to modify and save user account.
-        accountEntity.setUsername(username);
-        accountEntity.setPassword(password);
-        accountEntity.setEmail(email);
-        accountEntity.setDisplayname(
-            StringUtils.hasText(displayname) ? displayname : username);
-        accountEntity.setRole(UserAccountRoles.USER_ROLE_MAINTAINER);
-        accountEntity.setCreateDate(LocalDateTime.now());
-
-        try
-        {
-            accountEntity = userAccountRepository.save(accountEntity);
-        }
-        catch (Exception ex)
-        {
-            throw generateException(
-                EXCEPTION_MAINTAINER_REGISTER + unregisteredMaintainer.getId()
-                    + ". Error writing to database",
-                UserAccountServiceException.Codes.DATABASE_ERROR_WRITE, ex);
-        }
-
-        log.info("Registered Maintainer account id: {} with username: {}",
-            accountEntity.getId(), accountEntity.getUsername());
-
-        try
-        {
-            Hibernate.initialize(accountEntity.getCharacters());
-
-            return getMaintainerDto(accountEntity);
-        }
-        catch (Exception ex)
-        {
-            throw generateException(
-                EXCEPTION_MAINTAINER_MODEL + unregisteredMaintainer.getId()
-                    + ". Error reading from database",
-                UserAccountServiceException.Codes.DATABASE_ERROR_READ_MAPPING,
-                ex);
-        }
-    }
-
-    @Transactional
     public MaintainerDto retrieveMaintainer(Long userId)
         throws UserAccountServiceException
     {
         // Attempt to read from the database.
         UserAccount accountEntity;
-        
+
         try
         {
             accountEntity = getUserAccountEntity(userId);
@@ -729,11 +684,9 @@ public class UserAccountService
                 UserAccountServiceException.Codes.INVALID_ROLE);
         }
 
-        // Prepare collection objects and return a full DTO.
+        // Return full DTO.
         try
         {
-            Hibernate.initialize(accountEntity.getCharacters());
-
             return getMaintainerDto(accountEntity);
         }
         catch (Exception ex)
@@ -747,11 +700,10 @@ public class UserAccountService
     }
 
     @Transactional
-    public MaintainerDto updateMaintainer(MaintainerDto maintainer)
-        throws UserAccountServiceException
+    public MaintainerDto registerOrUpdateMaintainer(Long userId,
+        UserAccountDto maintainerUpdate) throws UserAccountServiceException
     {
-        // Attempt to read from the database.
-        if (maintainer == null)
+        if (maintainerUpdate == null)
         {
             throw generateException(
                 "Attempted update of a null Maintainer account",
@@ -762,12 +714,12 @@ public class UserAccountService
 
         try
         {
-            accountEntity = getUserAccountEntity(maintainer.getId());
+            accountEntity = getUserAccountEntity(userId);
         }
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_MAINTAINER_UPDATE + maintainer.getId()
+                EXCEPTION_MAINTAINER_UPDATE + userId
                     + ". Error reading from database",
                 UserAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
@@ -775,24 +727,180 @@ public class UserAccountService
         if (accountEntity == null)
         {
             throw generateException(
-                EXCEPTION_MAINTAINER_UPDATE + maintainer.getId()
+                EXCEPTION_MAINTAINER_UPDATE + userId
                     + ". User account not found",
                 UserAccountServiceException.Codes.ACCOUNT_NOT_FOUND);
         }
 
         // Check if the account is in the correct role.
-        if (accountEntity.getRole() != UserAccountRoles.USER_ROLE_MAINTAINER)
+        if (accountEntity.getRole() != UserAccountRoles.USER_ROLE_MAINTAINER
+            && accountEntity
+                .getRole() != UserAccountRoles.USER_ROLE_UNREGISTERED)
         {
             throw generateException(
-                EXCEPTION_MAINTAINER_UPDATE + maintainer.getId()
-                    + ". Invalid role",
+                EXCEPTION_MAINTAINER_UPDATE + userId + ". Invalid role",
                 UserAccountServiceException.Codes.INVALID_ROLE);
         }
 
+        Instance instanceEntity;
+
+        try
+        {
+            instanceEntity = instanceService
+                .getInstanceEntity(accountEntity.getParentInstance().getId());
+        }
+        catch (Exception ex)
+        {
+            throw generateException(
+                EXCEPTION_MAINTAINER_UPDATE + userId
+                    + ". Error reading Instance from database",
+                UserAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
+        }
+
+        if (instanceEntity == null)
+        {
+            throw generateException(
+                EXCEPTION_MAINTAINER_UPDATE + userId
+                    + ". Invalid Instance object",
+                UserAccountServiceException.Codes.INVALID_INSTANCE_OBJECT);
+        }
+
+        // Check if we're registering and do additional validation checks.
+        Boolean isRegistering = accountEntity
+            .getRole() == UserAccountRoles.USER_ROLE_UNREGISTERED;
+
+        if (isRegistering)
+        {
+            if (maintainerUpdate.getUsername() == null
+                || maintainerUpdate.getPassword() == null)
+            {
+                throw generateException(EXCEPTION_MAINTAINER_UPDATE + userId
+                    + ". Required username and password fields for unregistered maintainer.",
+                    UserAccountServiceException.Codes.INVALID_INSTANCE_OBJECT);
+            }
+        }
+
+        // If we're updating username or email, check to see if it's valid and
+        // an account with the same username and email does not already exist.
+        if (maintainerUpdate.getUsername() != null
+            && !StringUtils.hasText(maintainerUpdate.getUsername()))
+        {
+            throw generateException(
+                EXCEPTION_OWNER_UPDATE + userId + ". Invalid username",
+                UserAccountServiceException.Codes.INVALID_USERNAME);
+        }
+
+        if (StringUtils.hasText(maintainerUpdate.getUsername())
+            || StringUtils.hasText(maintainerUpdate.getEmail()))
+        {
+            // Check if it matches the instance's Owner.
+            UserAccount instanceOwnerEntity = instanceEntity.getOwner();
+
+            // Username
+            if (StringUtils.hasText(maintainerUpdate.getUsername()))
+            {
+                if (instanceOwnerEntity.getUsername()
+                    .equalsIgnoreCase(maintainerUpdate.getUsername()))
+                {
+                    throw generateException(
+                        "Owner account with the same username already exists! Username = "
+                            + instanceOwnerEntity.getUsername(),
+                        UserAccountServiceException.Codes.ACCOUNT_ALREADY_EXISTS);
+                }
+            }
+
+            // Email (if updated)
+            if (StringUtils.hasText(maintainerUpdate.getEmail()))
+            {
+                if (instanceOwnerEntity.getEmail()
+                    .equalsIgnoreCase(maintainerUpdate.getEmail()))
+                {
+                    throw generateException(
+                        "Owner account with the same email already exists! Email = "
+                            + instanceOwnerEntity.getEmail(),
+                        UserAccountServiceException.Codes.ACCOUNT_ALREADY_EXISTS);
+                }
+            }
+            // Email (if not updated)
+            else if (StringUtils.hasText(accountEntity.getEmail())
+                && instanceOwnerEntity.getEmail()
+                    .equalsIgnoreCase(accountEntity.getEmail()))
+            {
+                throw generateException(
+                    "Owner account with the same email already exists! Email = "
+                        + instanceOwnerEntity.getEmail(),
+                    UserAccountServiceException.Codes.ACCOUNT_ALREADY_EXISTS);
+            }
+
+            // Check if it matches other maintainers.
+            Boolean accountExists;
+
+            try
+            {
+                accountExists = accountExistsInInstance(
+                    maintainerUpdate.getUsername(),
+                    StringUtils.hasText(maintainerUpdate.getEmail())
+                        ? maintainerUpdate.getEmail()
+                        : accountEntity.getEmail(),
+                    instanceEntity);
+            }
+            catch (Exception ex)
+            {
+                throw generateException(EXCEPTION_MAINTAINER_UPDATE + userId
+                    + ". Error checking for matching accounts from database",
+                    UserAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
+            }
+
+            if (accountExists)
+            {
+                throw generateException(
+                    "Maintainer account with the same username or non-null email already exists! Username = "
+                        + maintainerUpdate.getUsername() + ", email = "
+                        + (StringUtils.hasText(maintainerUpdate.getEmail())
+                            ? maintainerUpdate.getEmail()
+                            : accountEntity.getEmail()),
+                    UserAccountServiceException.Codes.ACCOUNT_ALREADY_EXISTS);
+            }
+        }
+
         // Attempt to modify and save user account.
-        accountEntity.setUsername(maintainer.getUsername());
-        accountEntity.setEmail(maintainer.getEmail());
-        accountEntity.setDisplayname(maintainer.getDisplayname());
+        if (maintainerUpdate.getUsername() != null)
+        {
+            accountEntity.setUsername(maintainerUpdate.getUsername());
+        }
+
+        if (maintainerUpdate.getPassword() != null)
+        {
+            if (!StringUtils.hasText(maintainerUpdate.getPassword()))
+            {
+                throw generateException(
+                    EXCEPTION_OWNER_UPDATE + userId + ". Invalid password",
+                    UserAccountServiceException.Codes.INVALID_PASSWORD);
+            }
+
+            // TODO: Password hashing.
+            accountEntity.setPassword(maintainerUpdate.getPassword());
+        }
+
+        if (maintainerUpdate.getEmail() != null)
+        {
+            accountEntity.setEmail(maintainerUpdate.getEmail());
+        }
+
+        if (maintainerUpdate.getDisplayname() != null)
+        {
+            accountEntity.setDisplayname(maintainerUpdate.getDisplayname());
+        }
+        else if (isRegistering)
+        {
+            accountEntity.setDisplayname(maintainerUpdate.getUsername());
+        }
+
+        // Registering account.
+        if (isRegistering)
+        {
+            accountEntity.setRole(UserAccountRoles.USER_ROLE_MAINTAINER);
+        }
 
         try
         {
@@ -801,23 +909,29 @@ public class UserAccountService
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_MAINTAINER_UPDATE + maintainer.getId()
+                EXCEPTION_MAINTAINER_UPDATE + userId
                     + ". Error writing to database",
                 UserAccountServiceException.Codes.DATABASE_ERROR_WRITE, ex);
         }
 
-        log.info("Updated Maintainer account with id: {}", maintainer.getId());
+        if (isRegistering)
+        {
+            log.info("Registered Maintainer account id: {} with username: {}",
+                userId, accountEntity.getUsername());
+        }
+        else
+        {
+            log.info("Updated Maintainer account id: {}", userId);
+        }
 
         try
         {
-            Hibernate.initialize(accountEntity.getCharacters());
-
             return getMaintainerDto(accountEntity);
         }
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_MAINTAINER_MODEL + accountEntity.getId()
+                EXCEPTION_MAINTAINER_MODEL + userId
                     + ". Error reading from database",
                 UserAccountServiceException.Codes.DATABASE_ERROR_READ_MAPPING,
                 ex);
@@ -921,7 +1035,7 @@ public class UserAccountService
         throws Exception
     {
         log.debug(
-            "Searching for existance of Global user account with username: {} and/or email: {}",
+            "Searching for existance of Owner user account with username: {} and/or email: {}",
             username, email);
 
         ExampleMatcher matcher = ExampleMatcher.matchingAll().withIgnoreCase();

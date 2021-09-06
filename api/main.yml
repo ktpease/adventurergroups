@@ -301,7 +301,7 @@ paths:
         '500':
           description: Server error.
     
-    put:
+    patch:
       tags:
         - Maintainer
       summary: Update the designated maintainer account, registering it if necessary.

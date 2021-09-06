@@ -51,11 +51,11 @@ public class CharacterService
     private final String EXCEPTION_CHARACTER_UPDATE = "Cannot update Character with id: ";
     private final String EXCEPTION_CHARACTER_DELETE = "Cannot delete Character with id: ";
 
-    private final String EXCEPTION_CHARACTER_CREATE_MAINTAINER = "Cannot create Character for Maintainer id: ";
+    private final String EXCEPTION_CHARACTER_CREATE_FOR_MAINTAINER = "Cannot create Character for Maintainer id: ";
 
-    private final String EXCEPTION_CHARACTER_RETRIEVE_INSTANCE = "Cannot retrieve Characters for instance id: ";
-    private final String EXCEPTION_CHARACTER_RETRIEVE_MAINTAINER = "Cannot retrieve Characters for maintainer id: ";
-    private final String EXCEPTION_CHARACTER_RETRIEVE_GROUP = "Cannot retrieve Characters for group id: ";
+    private final String EXCEPTION_CHARACTER_RETRIEVE_FOR_INSTANCE = "Cannot retrieve Characters for instance id: ";
+    private final String EXCEPTION_CHARACTER_RETRIEVE_FOR_MAINTAINER = "Cannot retrieve Characters for maintainer id: ";
+    private final String EXCEPTION_CHARACTER_RETRIEVE_FOR_GROUP = "Cannot retrieve Characters for group id: ";
 
     private final String EXCEPTION_CHARACTER_MODEL = "Cannot return model for Character with id: ";
 
@@ -174,11 +174,11 @@ public class CharacterService
     }
 
     @Transactional
-    public CharacterDto updateCharacter(CharacterDto character)
-        throws CharacterServiceException
+    public CharacterDto updateCharacter(Long characterId,
+        CharacterDto characterUpdate) throws CharacterServiceException
     {
         // Attempt to read from the database.
-        if (character == null)
+        if (characterUpdate == null)
         {
             throw generateException(
                 "Attempted update of a null Character object",
@@ -189,12 +189,12 @@ public class CharacterService
 
         try
         {
-            characterEntity = getCharacterEntity(character);
+            characterEntity = getCharacterEntity(characterId);
         }
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_CHARACTER_UPDATE + character.getId()
+                EXCEPTION_CHARACTER_UPDATE + characterId
                     + ". Error reading from database",
                 CharacterServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
@@ -202,44 +202,44 @@ public class CharacterService
         if (characterEntity == null)
         {
             throw generateException(
-                EXCEPTION_CHARACTER_UPDATE + character.getId()
+                EXCEPTION_CHARACTER_UPDATE + characterId
                     + ". Character not found",
                 CharacterServiceException.Codes.CHARACTER_NOT_FOUND);
         }
 
         // Attempt to modify and save character.
-        characterEntity.setName(character.getName());
-        characterEntity.setDescription(character.getDescription());
-        characterEntity.setColorPrimary(character.getColorPrimary());
-        characterEntity.setColorSecondary(character.getColorSecondary());
+        characterEntity.setName(characterUpdate.getName());
+        characterEntity.setDescription(characterUpdate.getDescription());
+        characterEntity.setColorPrimary(characterUpdate.getColorPrimary());
+        characterEntity.setColorSecondary(characterUpdate.getColorSecondary());
 
-        if (character.getMaintainer() != null)
+        if (characterUpdate.getMaintainer() != null)
         {
             try
             {
                 characterEntity.setMaintainer(userAccountService
-                    .getUserAccountEntity(character.getMaintainer()));
+                    .getUserAccountEntity(characterUpdate.getMaintainer()));
             }
             catch (Exception ex)
             {
                 throw generateException(
-                    EXCEPTION_CHARACTER_UPDATE + character.getId()
+                    EXCEPTION_CHARACTER_UPDATE + characterId
                         + ". Error reading from database",
                     CharacterServiceException.Codes.DATABASE_ERROR_READ, ex);
             }
         }
 
-        if (character.getCharacterGroup() != null)
+        if (characterUpdate.getCharacterGroup() != null)
         {
             try
             {
-                characterEntity.setCharacterGroup(
-                    getCharacterGroupEntity(character.getCharacterGroup()));
+                characterEntity.setCharacterGroup(getCharacterGroupEntity(
+                    characterUpdate.getCharacterGroup()));
             }
             catch (Exception ex)
             {
                 throw generateException(
-                    EXCEPTION_CHARACTER_UPDATE + character.getId()
+                    EXCEPTION_CHARACTER_UPDATE + characterUpdate.getId()
                         + ". Error reading from database",
                     CharacterServiceException.Codes.DATABASE_ERROR_READ, ex);
             }
@@ -252,12 +252,12 @@ public class CharacterService
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_CHARACTER_UPDATE + character.getId()
+                EXCEPTION_CHARACTER_UPDATE + characterId
                     + ". Error writing to database",
                 CharacterServiceException.Codes.DATABASE_ERROR_WRITE, ex);
         }
 
-        log.info("Updated Character with id: {}", character.getId());
+        log.info("Updated Character with id: {}", characterId);
 
         // Return full DTO.
         try
@@ -267,7 +267,7 @@ public class CharacterService
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_CHARACTER_MODEL + character.getId()
+                EXCEPTION_CHARACTER_MODEL + characterId
                     + ". Error reading from database",
                 CharacterServiceException.Codes.DATABASE_ERROR_READ_MAPPING,
                 ex);
@@ -342,7 +342,7 @@ public class CharacterService
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_CHARACTER_CREATE_MAINTAINER + maintainer.getId()
+                EXCEPTION_CHARACTER_CREATE_FOR_MAINTAINER + maintainer.getId()
                     + ". Error reading user account from database",
                 CharacterServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
@@ -363,7 +363,7 @@ public class CharacterService
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_CHARACTER_CREATE_MAINTAINER + maintainer.getId()
+                EXCEPTION_CHARACTER_CREATE_FOR_MAINTAINER + maintainer.getId()
                     + ". Error writing to database",
                 CharacterServiceException.Codes.DATABASE_ERROR_WRITE, ex);
         }
@@ -407,7 +407,7 @@ public class CharacterService
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_CHARACTER_RETRIEVE_INSTANCE + instance.getId()
+                EXCEPTION_CHARACTER_RETRIEVE_FOR_INSTANCE + instance.getId()
                     + ". Error reading Instance from database",
                 CharacterServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
@@ -422,7 +422,7 @@ public class CharacterService
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_CHARACTER_RETRIEVE_INSTANCE + instance.getId()
+                EXCEPTION_CHARACTER_RETRIEVE_FOR_INSTANCE + instance.getId()
                     + ". Error reading from database",
                 CharacterServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
@@ -445,7 +445,7 @@ public class CharacterService
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_CHARACTER_RETRIEVE_INSTANCE + instance.getId()
+                EXCEPTION_CHARACTER_RETRIEVE_FOR_INSTANCE + instance.getId()
                     + ". Error reading from database",
                 CharacterServiceException.Codes.DATABASE_ERROR_READ_MAPPING,
                 ex);
@@ -474,7 +474,7 @@ public class CharacterService
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_CHARACTER_RETRIEVE_MAINTAINER + maintainer.getId()
+                EXCEPTION_CHARACTER_RETRIEVE_FOR_MAINTAINER + maintainer.getId()
                     + ". Error reading user account from database",
                 CharacterServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
@@ -490,7 +490,7 @@ public class CharacterService
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_CHARACTER_RETRIEVE_MAINTAINER + maintainer.getId()
+                EXCEPTION_CHARACTER_RETRIEVE_FOR_MAINTAINER + maintainer.getId()
                     + ". Error reading from database",
                 CharacterServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
@@ -513,7 +513,7 @@ public class CharacterService
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_CHARACTER_RETRIEVE_MAINTAINER + maintainer.getId()
+                EXCEPTION_CHARACTER_RETRIEVE_FOR_MAINTAINER + maintainer.getId()
                     + ". Error reading from database",
                 CharacterServiceException.Codes.DATABASE_ERROR_READ_MAPPING,
                 ex);
@@ -541,7 +541,7 @@ public class CharacterService
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_CHARACTER_RETRIEVE_GROUP + characterGroup.getId()
+                EXCEPTION_CHARACTER_RETRIEVE_FOR_GROUP + characterGroup.getId()
                     + ". Error reading character group from database",
                 CharacterServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
@@ -557,7 +557,7 @@ public class CharacterService
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_CHARACTER_RETRIEVE_GROUP + characterGroup.getId()
+                EXCEPTION_CHARACTER_RETRIEVE_FOR_GROUP + characterGroup.getId()
                     + ". Error reading from database",
                 CharacterServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
@@ -580,7 +580,7 @@ public class CharacterService
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_CHARACTER_RETRIEVE_GROUP + characterGroup.getId()
+                EXCEPTION_CHARACTER_RETRIEVE_FOR_GROUP + characterGroup.getId()
                     + ". Error reading from database",
                 CharacterServiceException.Codes.DATABASE_ERROR_READ_MAPPING,
                 ex);
@@ -718,11 +718,11 @@ public class CharacterService
     }
 
     @Transactional
-    public CharacterGroupDto updateCharacterGroup(
-        CharacterGroupDto characterGroup) throws CharacterServiceException
+    public CharacterGroupDto updateCharacterGroup(Long characterGroupId,
+        CharacterGroupDto characterGroupUpdate) throws CharacterServiceException
     {
         // Attempt to read from the database.
-        if (characterGroup == null)
+        if (characterGroupUpdate == null)
         {
             throw generateException(
                 "Attempted update of a null Character Group object",
@@ -733,13 +733,12 @@ public class CharacterService
 
         try
         {
-            characterGroupEntity = getCharacterGroupEntity(
-                characterGroup.getId());
+            characterGroupEntity = getCharacterGroupEntity(characterGroupId);
         }
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_GROUP_UPDATE + characterGroup.getId()
+                EXCEPTION_GROUP_UPDATE + characterGroupId
                     + ". Error reading from database",
                 CharacterServiceException.Codes.DATABASE_ERROR_READ, ex);
         }
@@ -747,15 +746,17 @@ public class CharacterService
         if (characterGroupEntity == null)
         {
             throw generateException(
-                EXCEPTION_GROUP_UPDATE + characterGroup.getId()
+                EXCEPTION_GROUP_UPDATE + characterGroupId
                     + ". Character Group not found",
                 CharacterServiceException.Codes.CHARACTER_GROUP_NOT_FOUND);
         }
 
         // Attempt to modify and save group.
-        characterGroupEntity.setName(characterGroup.getName());
-        characterGroupEntity.setDescription(characterGroup.getDescription());
-        characterGroupEntity.setColorPrimary(characterGroup.getColorPrimary());
+        characterGroupEntity.setName(characterGroupUpdate.getName());
+        characterGroupEntity
+            .setDescription(characterGroupUpdate.getDescription());
+        characterGroupEntity
+            .setColorPrimary(characterGroupUpdate.getColorPrimary());
 
         try
         {
@@ -765,12 +766,12 @@ public class CharacterService
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_GROUP_UPDATE + characterGroup.getId()
+                EXCEPTION_GROUP_UPDATE + characterGroupId
                     + ". Error writing to database",
                 CharacterServiceException.Codes.DATABASE_ERROR_WRITE, ex);
         }
 
-        log.info("Updated Character Group with id: {}", characterGroup.getId());
+        log.info("Updated Character Group with id: {}", characterGroupId);
 
         // Return full DTO.
         try
@@ -780,7 +781,7 @@ public class CharacterService
         catch (Exception ex)
         {
             throw generateException(
-                EXCEPTION_GROUP_MODEL + characterGroupEntity.getId()
+                EXCEPTION_GROUP_MODEL + characterGroupId
                     + ". Error reading from database",
                 CharacterServiceException.Codes.DATABASE_ERROR_READ_MAPPING,
                 ex);

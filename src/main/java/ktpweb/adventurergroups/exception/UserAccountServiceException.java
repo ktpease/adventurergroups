@@ -39,6 +39,7 @@ public class UserAccountServiceException extends Exception
         INVALID_USERNAME,
         INVALID_PASSWORD,
         INVALID_ROLE,
+        INVALID_EMAIL,
         CHARACTER_NOT_FOUND,
         INVALID_CHARACTER_OBJECT,
         INSTANCE_NOT_FOUND,

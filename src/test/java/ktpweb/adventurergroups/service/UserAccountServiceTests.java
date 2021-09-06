@@ -19,6 +19,7 @@ import ktpweb.adventurergroups.model.CharacterDto;
 import ktpweb.adventurergroups.model.InstanceDto;
 import ktpweb.adventurergroups.model.MaintainerDto;
 import ktpweb.adventurergroups.model.OwnerDto;
+import ktpweb.adventurergroups.model.UserAccountDto;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -47,13 +48,11 @@ class UserAccountServiceTests
 			"Test Owner does not have correct username");
 
 		assertDoesNotThrow(() -> userAccountService.createOwner("testowner2",
-			"testpassword", "testemail2"),
-			"Cannot create separate owner");
+			"testpassword", "testemail2"), "Cannot create separate owner");
 
 		// Fail to create an owner with an invalid username.
-		exception = assertThrows(
-			UserAccountServiceException.class, () -> userAccountService
-				.createOwner("", "testpassword", null),
+		exception = assertThrows(UserAccountServiceException.class,
+			() -> userAccountService.createOwner("", "testpassword", null),
 			"Should not create second Test Owner with no username.");
 		assertEquals(exception.getCode(),
 			UserAccountServiceException.Codes.INVALID_USERNAME);
@@ -140,12 +139,17 @@ class UserAccountServiceTests
 			"test");
 
 		// Create and Register maintainer
-		MaintainerDto testunregisteredMaintainer = userAccountService
+		MaintainerDto testUnregisteredMaintainer = userAccountService
 			.createUnregisteredMaintainer(testInstance);
 
+		UserAccountDto registerInfo = new UserAccountDto();
+		registerInfo.setUsername("testmaintainer");
+		registerInfo.setPassword("testpassword");
+		registerInfo.setEmail("testemail");
+
 		MaintainerDto testRegisteredMaintainer = userAccountService
-			.registerMaintainer(testunregisteredMaintainer, "testmaintainer",
-				"testpassword", "testemail", null);
+			.registerOrUpdateMaintainer(testUnregisteredMaintainer.getId(),
+				registerInfo);
 
 		assertNotNull(testRegisteredMaintainer.getId(),
 			"Cannot register maintainer in database");
@@ -153,71 +157,84 @@ class UserAccountServiceTests
 			testInstance.getId(),
 			"Test Maintainer does not have correct instance");
 
-		// Fail to re-register maintainer
-		exception = assertThrows(UserAccountServiceException.class,
-			() -> userAccountService.registerMaintainer(
-				testRegisteredMaintainer, "testmaintainer2", "testpassword",
-				null, null),
-			"Should not register Maintainer that is already registered");
-		assertEquals(exception.getCode(),
-			UserAccountServiceException.Codes.INVALID_ROLE);
-
 		// Create second unregistered maintainer for fail conditions.
 		MaintainerDto testunregisteredMaintainer2 = userAccountService
 			.createUnregisteredMaintainer(testInstance);
 
 		// Fail to register maintainer with an invalid username.
-		exception = assertThrows(UserAccountServiceException.class,
-			() -> userAccountService.registerMaintainer(
-				testunregisteredMaintainer2, "", "testpassword", null, null),
-			"Should not register Maintainer with no username.");
+		exception = assertThrows(UserAccountServiceException.class, () -> {
+			UserAccountDto badRegisterInfo = new UserAccountDto();
+			badRegisterInfo.setUsername("");
+			badRegisterInfo.setPassword("testpassword");
+
+			userAccountService.registerOrUpdateMaintainer(
+				testunregisteredMaintainer2.getId(), badRegisterInfo);
+		}, "Should not register Maintainer with no username.");
 		assertEquals(exception.getCode(),
 			UserAccountServiceException.Codes.INVALID_USERNAME);
 
 		// Fail to register maintainer with an invalid password.
-		exception = assertThrows(UserAccountServiceException.class,
-			() -> userAccountService.registerMaintainer(
-				testunregisteredMaintainer2, "testmaintainer2", "", null, null),
-			"Should not register Maintainer with bad password.");
+		exception = assertThrows(UserAccountServiceException.class, () -> {
+			UserAccountDto badRegisterInfo = new UserAccountDto();
+			badRegisterInfo.setUsername("testmaintainer2");
+			badRegisterInfo.setPassword("");
+
+			userAccountService.registerOrUpdateMaintainer(
+				testunregisteredMaintainer2.getId(), badRegisterInfo);
+		}, "Should not register Maintainer with bad password.");
 		assertEquals(exception.getCode(),
 			UserAccountServiceException.Codes.INVALID_PASSWORD);
 
 		// Fail to register maintainer with the same username as another
 		// maintainer.
-		exception = assertThrows(UserAccountServiceException.class,
-			() -> userAccountService.registerMaintainer(
-				testunregisteredMaintainer2, "testmaintainer", "testpassword",
-				null, null),
-			"Should not register Maintainer with same username as Test Maintainer");
+		exception = assertThrows(UserAccountServiceException.class, () -> {
+			UserAccountDto badRegisterInfo = new UserAccountDto();
+			badRegisterInfo.setUsername("testmaintainer");
+			badRegisterInfo.setPassword("testpassword");
+
+			userAccountService.registerOrUpdateMaintainer(
+				testunregisteredMaintainer2.getId(), badRegisterInfo);
+		}, "Should not register Maintainer with same username as Test Maintainer");
 		assertEquals(exception.getCode(),
 			UserAccountServiceException.Codes.ACCOUNT_ALREADY_EXISTS);
 
 		// Fail to register maintainer with the same email as another
 		// maintainer.
-		exception = assertThrows(UserAccountServiceException.class,
-			() -> userAccountService.registerMaintainer(
-				testunregisteredMaintainer2, "testmaintainer2", "testpassword",
-				"testemail", null),
-			"Should not register Maintainer with same non-null email as Test Maintainer");
+		exception = assertThrows(UserAccountServiceException.class, () -> {
+			UserAccountDto badRegisterInfo = new UserAccountDto();
+			badRegisterInfo.setUsername("testmaintainer-UNIQUE");
+			badRegisterInfo.setPassword("testpassword");
+			badRegisterInfo.setEmail("testemail");
+
+			userAccountService.registerOrUpdateMaintainer(
+				testunregisteredMaintainer2.getId(), badRegisterInfo);
+		}, "Should not register Maintainer with same non-null email as Test Maintainer");
 		assertEquals(exception.getCode(),
 			UserAccountServiceException.Codes.ACCOUNT_ALREADY_EXISTS);
 
 		// Fail to register maintainer with the same username as instance
 		// owner.
-		exception = assertThrows(UserAccountServiceException.class,
-			() -> userAccountService.registerMaintainer(
-				testunregisteredMaintainer2, "testowner", "testpassword", null,
-				null),
-			"Should not register Maintainer with same username as Test Owner");
+		exception = assertThrows(UserAccountServiceException.class, () -> {
+			UserAccountDto badRegisterInfo = new UserAccountDto();
+			badRegisterInfo.setUsername("testowner");
+			badRegisterInfo.setPassword("testpassword");
+
+			userAccountService.registerOrUpdateMaintainer(
+				testunregisteredMaintainer2.getId(), badRegisterInfo);
+		}, "Should not register Maintainer with same username as Test Owner");
 		assertEquals(exception.getCode(),
 			UserAccountServiceException.Codes.ACCOUNT_ALREADY_EXISTS);
 
 		// Fail to register maintainer with the same email as instance owner.
-		exception = assertThrows(UserAccountServiceException.class,
-			() -> userAccountService.registerMaintainer(
-				testunregisteredMaintainer2, "testmaintainer2", "testpassword",
-				"testowneremail", null),
-			"Should not register Maintainer with same non-null email as Test Owner");
+		exception = assertThrows(UserAccountServiceException.class, () -> {
+			UserAccountDto badRegisterInfo = new UserAccountDto();
+			badRegisterInfo.setUsername("testmaintainer-UNIQUE");
+			badRegisterInfo.setPassword("testpassword");
+			badRegisterInfo.setEmail("testowneremail");
+
+			userAccountService.registerOrUpdateMaintainer(
+				testunregisteredMaintainer2.getId(), badRegisterInfo);
+		}, "Should not register Maintainer with same non-null email as Test Owner");
 		assertEquals(exception.getCode(),
 			UserAccountServiceException.Codes.ACCOUNT_ALREADY_EXISTS);
 	}
