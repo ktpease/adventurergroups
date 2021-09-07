@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Example;
 import org.springframework.data.domain.ExampleMatcher;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -21,6 +22,9 @@ public class AdminAccountService
 {
     @Autowired
     private AdminAccountRepository adminAccountRepository;
+
+    @Autowired
+    private BCryptPasswordEncoder passwordEncoder;
 
     // -----------------------------------------------------------------------------------------------------------------
     // Admin-related public methods.
@@ -82,7 +86,7 @@ public class AdminAccountService
         AdminAccount accountEntity = new AdminAccount();
 
         accountEntity.setUsername(username);
-        accountEntity.setPassword(password);
+        accountEntity.setPassword(passwordEncoder.encode(password));
         accountEntity.setEmail(email);
         accountEntity.setDisplayname(
             StringUtils.hasText(displayname) ? displayname : username);
