@@ -114,7 +114,7 @@ public class InstanceService
         Instance instanceEntity = new Instance();
 
         instanceEntity.setOwner(ownerEntity);
-        instanceEntity.setSubdomainName(subdomainName);
+        instanceEntity.setSubdomainName(subdomainName.toLowerCase());
         instanceEntity.setDisplayName(subdomainName);
         instanceEntity.setCreateDate(LocalDateTime.now());
 
@@ -239,7 +239,9 @@ public class InstanceService
                 InstanceServiceException.Codes.INVALID_SUBDOMAINNAME);
         }
 
-        if (instanceExists(instanceUpdate.getSubdomainName()))
+        if (!instanceEntity.getSubdomainName()
+            .equalsIgnoreCase(instanceUpdate.getSubdomainName())
+            && instanceExists(instanceUpdate.getSubdomainName()))
         {
             throw generateException(
                 EXCEPTION_UPDATE + instanceId + ". Subdomain already exists",
@@ -247,7 +249,7 @@ public class InstanceService
         }
 
         // Attempt to modify and save instance.
-        instanceEntity.setSubdomainName(instanceUpdate.getSubdomainName());
+        instanceEntity.setSubdomainName(instanceUpdate.getSubdomainName().toLowerCase());
         instanceEntity.setDisplayName(instanceUpdate.getDisplayName());
         instanceEntity.setDescription(instanceUpdate.getDescription());
 

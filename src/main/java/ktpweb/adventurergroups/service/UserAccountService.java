@@ -1,7 +1,6 @@
 package ktpweb.adventurergroups.service;
 
 import java.time.LocalDateTime;
-import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -633,8 +632,7 @@ public class UserAccountService
         accountEntity.setParentInstance(instanceEntity);
         accountEntity.setCreateDate(LocalDateTime.now());
 
-        accountEntity.setCharacters(Stream.of(characterEntity)
-            .collect(Collectors.toCollection(HashSet::new)));
+        characterEntity.setMaintainer(accountEntity);
 
         try
         {
