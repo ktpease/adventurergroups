@@ -8,6 +8,7 @@ import java.util.stream.Stream;
 
 import org.hashids.Hashids;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.IncorrectResultSizeDataAccessException;
 import org.springframework.data.domain.Example;
 import org.springframework.data.domain.ExampleMatcher;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -544,9 +545,9 @@ public class UserAccountService
         }
         catch (Exception ex)
         {
-            throw generateException(
-                EXCEPTION_MAINTAINER_CREATE_FOR_INSTANCE
-                    + parentInstance.getId() + ". Error writing to database. Unregistered maintainer without token!",
+            throw generateException(EXCEPTION_MAINTAINER_CREATE_FOR_INSTANCE
+                + parentInstance.getId()
+                + ". Error writing to database. Unregistered maintainer without token!",
                 UserAccountServiceException.Codes.DATABASE_ERROR_WRITE, ex);
         }
 
@@ -656,9 +657,9 @@ public class UserAccountService
         }
         catch (Exception ex)
         {
-            throw generateException(
-                EXCEPTION_MAINTAINER_CREATE_FOR_CHARACTER + character.getId()
-                    + ". Error writing to database. Unregistered maintainer without token!",
+            throw generateException(EXCEPTION_MAINTAINER_CREATE_FOR_CHARACTER
+                + character.getId()
+                + ". Error writing to database. Unregistered maintainer without token!",
                 UserAccountServiceException.Codes.DATABASE_ERROR_WRITE, ex);
         }
 
@@ -1033,6 +1034,87 @@ public class UserAccountService
     }
 
     // -----------------------------------------------------------------------------------------------------------------
+    // Public methods for handling all types of users.
+    // -----------------------------------------------------------------------------------------------------------------
+
+    private final String EXCEPTION_ALL_LOGIN_RETRIEVAL = "Cannot return account for complex username: ";
+
+    @Transactional
+    public UserAccountDto retrieveUserAccountForLogin(String usernameComplex)
+        throws UserAccountServiceException
+    {
+        // Get user account from complex string "(instance id / O)-(username)"
+        String[] splitUsernameComplex = usernameComplex.split("-", 2);
+
+        if (splitUsernameComplex.length != 2)
+        {
+            throw generateException(
+                EXCEPTION_ALL_LOGIN_RETRIEVAL + usernameComplex
+                    + ". Invalid complex username",
+                UserAccountServiceException.Codes.INVALID_LOGIN_COMPLEXUSERNAME);
+        }
+
+        UserAccount accountEntity;
+
+        // No instance specified, check for Owners.
+        if (splitUsernameComplex[0].charAt(0) == 'O')
+        {
+            accountEntity = getGlobalAccountWithUsername(
+                splitUsernameComplex[1]);
+        }
+        // Otherwise, check for Maintainers.
+        else
+        {
+            Instance instanceEntity;
+
+            try
+            {
+                instanceEntity = instanceService
+                    .getInstanceEntity(Long.valueOf(splitUsernameComplex[0]));
+            }
+            catch (Exception ex)
+            {
+                throw generateException(
+                    EXCEPTION_ALL_LOGIN_RETRIEVAL + usernameComplex
+                        + ". Invalid instance ID.",
+                    UserAccountServiceException.Codes.INVALID_INSTANCE_OBJECT,
+                    ex);
+            }
+
+            if (instanceEntity == null)
+            {
+                throw generateException(
+                    EXCEPTION_ALL_LOGIN_RETRIEVAL + usernameComplex
+                        + ". Invalid instance ID.",
+                    UserAccountServiceException.Codes.INVALID_INSTANCE_OBJECT);
+            }
+
+            accountEntity = getInstanceAccountWithUsername(
+                splitUsernameComplex[1], instanceEntity);
+        }
+
+        if (accountEntity != null)
+        {
+            try
+            {
+                return getUserAccountLoginDto(accountEntity);
+            }
+            catch (Exception ex)
+            {
+                throw generateException(
+                    EXCEPTION_ALL_LOGIN_RETRIEVAL + usernameComplex
+                        + ". Error mapping.",
+                    UserAccountServiceException.Codes.DATABASE_ERROR_READ_MAPPING,
+                    ex);
+            }
+        }
+        else
+        {
+            return null;
+        }
+    }
+
+    // -----------------------------------------------------------------------------------------------------------------
     // General User Account methods, not to be used with business layer.
     // -----------------------------------------------------------------------------------------------------------------
 
@@ -1150,6 +1232,35 @@ public class UserAccountService
         }
     }
 
+    protected UserAccount getGlobalAccountWithUsername(String username)
+        throws IncorrectResultSizeDataAccessException
+    {
+        ExampleMatcher matcher = ExampleMatcher.matchingAll().withIgnoreCase();
+
+        UserAccount probe = new UserAccount();
+        probe.setUsername(username);
+        probe.setDeleted(false);
+        probe.setRole(UserAccountRoles.USER_ROLE_OWNER);
+
+        return userAccountRepository.findOne(Example.of(probe, matcher))
+            .orElse(null);
+    }
+
+    protected UserAccount getInstanceAccountWithUsername(String username,
+        Instance instance) throws IncorrectResultSizeDataAccessException
+    {
+        ExampleMatcher matcher = ExampleMatcher.matchingAll().withIgnoreCase();
+
+        UserAccount probe = new UserAccount();
+        probe.setUsername(username);
+        probe.setDeleted(false);
+        probe.setRole(UserAccountRoles.USER_ROLE_MAINTAINER);
+        probe.setParentInstance(instance);
+
+        return userAccountRepository.findOne(Example.of(probe, matcher))
+            .orElse(null);
+    }
+
     // -----------------------------------------------------------------------------------------------------------------
     // DTO Mapping methods.
     // -----------------------------------------------------------------------------------------------------------------
@@ -1235,6 +1346,18 @@ public class UserAccountService
                     }
                 }).collect(Collectors.toSet()));
         }
+
+        return dto;
+    }
+
+    protected UserAccountDto getUserAccountLoginDto(UserAccount ua)
+        throws Exception
+    {
+        UserAccountDto dto = new UserAccountDto();
+
+        dto.setId(ua.getId());
+        dto.setUsername(ua.getUsername());
+        dto.setPassword(ua.getPassword());
 
         return dto;
     }

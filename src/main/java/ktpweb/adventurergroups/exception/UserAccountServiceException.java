@@ -43,6 +43,7 @@ public class UserAccountServiceException extends Exception
         CHARACTER_NOT_FOUND,
         INVALID_CHARACTER_OBJECT,
         INSTANCE_NOT_FOUND,
-        INVALID_INSTANCE_OBJECT
+        INVALID_INSTANCE_OBJECT,
+        INVALID_LOGIN_COMPLEXUSERNAME
     }
 }

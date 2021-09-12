@@ -6,6 +6,8 @@ info:
   description: API for the Adventurer Groups server.
 
 tags:
+- name: Authentication
+  description: For authentication attempts.
 - name: Owner
   description: For the owner user accounts.
 - name: Instance
@@ -18,6 +20,37 @@ tags:
   description: For organizing each instance's characters.
 
 paths:
+  /auth:
+    post:
+      tags:
+        - Authentication
+      summary: Attempt to authenticate using the provided credentials.
+      parameters:
+        - in: query
+          name: instance
+          schema:
+            type: integer
+          description: Instance ID, used only if we're authenticating a maintainer.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserAccountLogin'
+      security:
+        - ApiKeyHeaderAuth: []
+      responses:
+        '200':
+          description: Successful authentication, along with the X-Auth-Token token.
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+        '400' :
+          description: Invalid request data.
+        '500' :
+          description: Server error.
+
   /owners:
     post:
       tags:
@@ -28,6 +61,8 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/UserAccountNew'
+      security:
+        - ApiKeyHeaderAuth: []
       responses:
         '201':
           description: Successful creation of Owner
@@ -78,6 +113,8 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/UserAccount'
+      security:
+        - ApiKeyHeaderAuth: []
       responses:
         '200':
           description: Success.
@@ -96,6 +133,8 @@ paths:
       tags:
         - Owner
       summary: Delete the designated owner account.
+      security:
+        - ApiKeyHeaderAuth: []
       responses:
         '204':
           description: Account deleted successfully.
@@ -142,6 +181,8 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/InstanceUpdate'
+      security:
+        - ApiKeyHeaderAuth: []
       responses:
         '200':
           description: Success.
@@ -161,6 +202,8 @@ paths:
       tags:
         - Instance
       summary: Delete the designated instance.
+      security:
+        - ApiKeyHeaderAuth: []
       responses:
         '204':
           description: Instance deleted successfully.
@@ -209,6 +252,8 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/InstanceNew'
+      security:
+        - ApiKeyHeaderAuth: []
       responses:
         '201':
           description: Successful creation of Instance
@@ -254,6 +299,8 @@ paths:
       tags:
         - Maintainer
       summary: Create an unregistered maintainer account for the designated instance.
+      security:
+        - ApiKeyHeaderAuth: []
       responses:
         '201':
           description: Successful creation of Maintainer
@@ -287,6 +334,8 @@ paths:
       tags:
         - Maintainer
       summary: Retrieve the designated maintainer account.
+      security:
+        - ApiKeyHeaderAuth: []
       responses:
         '200':
           description: Success.
@@ -310,6 +359,8 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/UserAccount'
+      security:
+        - ApiKeyHeaderAuth: []
       responses:
         '200':
           description: Success.
@@ -328,6 +379,8 @@ paths:
       tags:
         - Maintainer
       summary: Delete the designated maintainer account.
+      security:
+        - ApiKeyHeaderAuth: []
       responses:
         '204':
           description: Account deleted successfully.
@@ -371,6 +424,8 @@ paths:
       tags:
         - Character
       summary: Create a new empty character for the designated instance, assigned to no maintainer.
+      security:
+        - ApiKeyHeaderAuth: []
       responses:
         '201':
           description: Successful creation of Character.
@@ -427,6 +482,8 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/CharacterUpdate'
+      security:
+        - ApiKeyHeaderAuth: []
       responses:
         '200':
           description: Success.
@@ -445,6 +502,8 @@ paths:
       tags:
         - Character
       summary: Delete the designated character.
+      security:
+        - ApiKeyHeaderAuth: []
       responses:
         '204':
           description: Character deleted successfully.
@@ -494,6 +553,8 @@ paths:
       tags:
         - Character
       summary: Create a new empty character for the designated maintainer account.
+      security:
+        - ApiKeyHeaderAuth: []
       responses:
         '201':
           description: Successful creation of Character.
@@ -576,6 +637,8 @@ paths:
       tags:
         - Character Group
       summary: Create a new empty character group for the designated instance.
+      security:
+        - ApiKeyHeaderAuth: []
       responses:
         '201':
           description: Successful creation of Character Group.
@@ -632,6 +695,8 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/CharacterGroupUpdate'
+      security:
+        - ApiKeyHeaderAuth: []
       responses:
         '200':
           description: Success.
@@ -650,6 +715,8 @@ paths:
       tags:
         - Character Group
       summary: Delete the designated character group, with all included characters made ungrouped.
+      security:
+        - ApiKeyHeaderAuth: []
       responses:
         '204':
           description: Character Group deleted successfully.
@@ -888,3 +955,17 @@ components:
           type: string
         email:
           type: string
+
+    UserAccountLogin:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+
+  securitySchemes:
+    ApiKeyHeaderAuth:
+      type: apiKey
+      in: header
+      name: X-Auth-Token
