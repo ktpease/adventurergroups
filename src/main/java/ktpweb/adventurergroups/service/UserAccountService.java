@@ -1038,6 +1038,8 @@ public class UserAccountService
     // -----------------------------------------------------------------------------------------------------------------
 
     private final String EXCEPTION_ALL_LOGIN_RETRIEVAL = "Cannot return account for complex username: ";
+    private final String EXCEPTION_ALL_VALIDATE_INSTANCE = "Cannot validate user for instance id: ";
+    private final String EXCEPTION_ALL_VALIDATE_CHARACTER = "Cannot validate user for character id: ";
 
     @Transactional
     public UserAccountDto retrieveUserAccountForLogin(String usernameComplex)
@@ -1111,6 +1113,94 @@ public class UserAccountService
         else
         {
             return null;
+        }
+    }
+
+    @Transactional
+    public boolean ownerOwnsInstance(Long userId, Long instanceId)
+        throws UserAccountServiceException
+    {
+        UserAccount userEntity;
+
+        try
+        {
+            userEntity = getUserAccountEntity(userId);
+        }
+        catch (Exception ex)
+        {
+            throw generateException(
+                EXCEPTION_ALL_VALIDATE_INSTANCE + instanceId
+                    + ". Error reading user account from database.",
+                UserAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
+        }
+
+        // Invalid user.
+        if (userEntity == null
+            || userEntity.getRole() != UserAccountRoles.USER_ROLE_OWNER)
+        {
+            return false;
+        }
+
+        for (Instance i : userEntity.getInstances())
+        {
+            if (i.getId().equals(instanceId))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    @Transactional
+    public boolean userOwnsCharacter(Long userId, Long characterId)
+        throws UserAccountServiceException
+    {
+        UserAccount userEntity;
+
+        try
+        {
+            userEntity = getUserAccountEntity(userId);
+        }
+        catch (Exception ex)
+        {
+            throw generateException(
+                EXCEPTION_ALL_VALIDATE_CHARACTER + characterId
+                    + ". Error reading user account from database.",
+                UserAccountServiceException.Codes.DATABASE_ERROR_READ, ex);
+        }
+
+        // Invalid user.
+        if (userEntity == null)
+        {
+            return false;
+        }
+        else if (userEntity.getRole() == UserAccountRoles.USER_ROLE_OWNER)
+        {
+            for (Instance i : userEntity.getInstances())
+            {
+                for (Character c : i.getCharacters())
+                {
+                    if (c.getId().equals(characterId))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+        else
+        {
+            for (Character c : userEntity.getCharacters())
+            {
+                if (c.getId().equals(characterId))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 

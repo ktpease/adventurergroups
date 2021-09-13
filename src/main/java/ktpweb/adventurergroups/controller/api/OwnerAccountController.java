@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.json.MappingJacksonValue;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,6 +19,7 @@ import ktpweb.adventurergroups.exception.UserAccountServiceException;
 import ktpweb.adventurergroups.model.OwnerDto;
 import ktpweb.adventurergroups.model.UserAccountDto;
 import ktpweb.adventurergroups.modelfilter.OwnerDtoFilters;
+import ktpweb.adventurergroups.security.User;
 import ktpweb.adventurergroups.service.UserAccountService;
 import lombok.extern.slf4j.Slf4j;
 
@@ -37,6 +39,8 @@ public class OwnerAccountController
     public ResponseEntity<MappingJacksonValue> createOwnerAccount(
         @RequestBody UserAccountDto newAccount)
     {
+        // TODO: Who should have authority to create new owner account?
+
         try
         {
             OwnerDto ownerDto = userAccountService.createOwner(newAccount);
@@ -108,8 +112,15 @@ public class OwnerAccountController
     @PatchMapping("/owners/{ownerId}")
     public ResponseEntity<MappingJacksonValue> updateOwnerAccount(
         @PathVariable String ownerId,
-        @RequestBody UserAccountDto updatedAccount)
+        @RequestBody UserAccountDto updatedAccount,
+        @AuthenticationPrincipal User authUser)
     {
+        if (authUser == null || authUser.getId() == null
+            || !authUser.getId().equals(Long.parseLong(ownerId)))
+        {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
+
         try
         {
             OwnerDto ownerDto = userAccountService
@@ -144,8 +155,15 @@ public class OwnerAccountController
     }
 
     @DeleteMapping(path = "/owners/{ownerId}")
-    public ResponseEntity<?> deleteOwnerAccount(@PathVariable String ownerId)
+    public ResponseEntity<?> deleteOwnerAccount(@PathVariable String ownerId,
+        @AuthenticationPrincipal User authUser)
     {
+        if (authUser == null || authUser.getId() == null
+            || !authUser.getId().equals(Long.parseLong(ownerId)))
+        {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
+
         try
         {
             userAccountService.deleteOwner(Long.parseLong(ownerId));
