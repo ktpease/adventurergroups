@@ -334,8 +334,6 @@ paths:
       tags:
         - Maintainer
       summary: Retrieve the designated maintainer account.
-      security:
-        - ApiKeyHeaderAuth: []
       responses:
         '200':
           description: Success.
@@ -887,9 +885,15 @@ components:
         colorSecondary:
           type: string
         maintainer:
-          $ref: '#/components/schemas/MaintainerSimple'
+          type: object
+          properties:
+            id:
+              type: integer
         characterGroup:
-          $ref: '#/components/schemas/CharacterGroupSimple'
+          type: object
+          properties:
+            id:
+              type: integer
               
     CharacterGroupSimple:
       type: object

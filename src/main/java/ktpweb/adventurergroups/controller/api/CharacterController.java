@@ -15,8 +15,17 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.server.ResponseStatusException;
 
+import ktpweb.adventurergroups.exception.CharacterServiceException;
+import ktpweb.adventurergroups.exception.InstanceServiceException;
+import ktpweb.adventurergroups.exception.UserAccountServiceException;
 import ktpweb.adventurergroups.model.CharacterDto;
+import ktpweb.adventurergroups.model.CharacterGroupDto;
+import ktpweb.adventurergroups.model.InstanceDto;
+import ktpweb.adventurergroups.model.MaintainerDto;
+import ktpweb.adventurergroups.modelfilter.CharacterDtoFilters;
 import ktpweb.adventurergroups.security.User;
+import ktpweb.adventurergroups.service.CharacterService;
+import ktpweb.adventurergroups.service.InstanceService;
 import ktpweb.adventurergroups.service.UserAccountService;
 import lombok.extern.slf4j.Slf4j;
 
@@ -27,7 +36,13 @@ public class CharacterController
 {
     @Autowired
     private UserAccountService userAccountService;
-    
+
+    @Autowired
+    private CharacterService characterService;
+
+    @Autowired
+    private InstanceService instanceService;
+
     //
     // Direct endpoints.
     //
@@ -36,7 +51,38 @@ public class CharacterController
     public ResponseEntity<MappingJacksonValue> retrieveCharacterList(
         @PathVariable String instanceId)
     {
-        return ResponseEntity.notFound().build();
+        try
+        {
+            InstanceDto instance = instanceService
+                .retrieveInstance(Long.parseLong(instanceId));
+
+            MappingJacksonValue returnValue = new MappingJacksonValue(
+                instance.getCharacters());
+            returnValue.setFilters(CharacterDtoFilters.simpleFilterProvider);
+
+            return ResponseEntity.ok(returnValue);
+        }
+        catch (InstanceServiceException ex)
+        {
+            switch (ex.getCode())
+            {
+            case INSTANCE_NOT_FOUND:
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, null,
+                    ex);
+            default:
+                throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR, null, ex);
+            }
+        }
+        catch (NumberFormatException ex)
+        {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, null, ex);
+        }
+        catch (Exception ex)
+        {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                null, ex);
+        }
     }
 
     @PostMapping("/instances/{instanceId}/characters")
@@ -51,21 +97,83 @@ public class CharacterController
             {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN);
             }
+
+            InstanceDto instance = instanceService
+                .retrieveInstance(Long.parseLong(instanceId));
+
+            CharacterDto character = characterService.createCharacter(instance);
+
+            MappingJacksonValue returnValue = new MappingJacksonValue(
+                character);
+            returnValue.setFilters(CharacterDtoFilters.fullFilterProvider);
+
+            return ResponseEntity.ok(returnValue);
+        }
+        catch (InstanceServiceException ex)
+        {
+            switch (ex.getCode())
+            {
+            case INSTANCE_NOT_FOUND:
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, null,
+                    ex);
+            default:
+                throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR, null, ex);
+            }
+        }
+        catch (NumberFormatException ex)
+        {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, null, ex);
         }
         catch (Exception ex)
         {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
                 null, ex);
         }
-        
-        return ResponseEntity.notFound().build();
     }
 
     @GetMapping("/instances/{instanceId}/characters/{characterId}")
     public ResponseEntity<MappingJacksonValue> retrieveCharacter(
         @PathVariable String instanceId, @PathVariable String characterId)
     {
-        return ResponseEntity.notFound().build();
+        try
+        {
+            CharacterDto character = characterService
+                .retrieveCharacter(Long.parseLong(characterId));
+
+            if (!character.getInstance().getId()
+                .equals(Long.parseLong(instanceId)))
+            {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+            }
+
+            MappingJacksonValue returnValue = new MappingJacksonValue(
+                character);
+            returnValue.setFilters(CharacterDtoFilters.fullFilterProvider);
+
+            return ResponseEntity.ok(returnValue);
+        }
+        catch (CharacterServiceException ex)
+        {
+            switch (ex.getCode())
+            {
+            case CHARACTER_NOT_FOUND:
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, null,
+                    ex);
+            default:
+                throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR, null, ex);
+            }
+        }
+        catch (NumberFormatException ex)
+        {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, null, ex);
+        }
+        catch (Exception ex)
+        {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                null, ex);
+        }
     }
 
     @PutMapping("/instances/{instanceId}/characters/{characterId}")
@@ -76,20 +184,62 @@ public class CharacterController
     {
         try
         {
-            if (authUser == null || authUser.getId() == null
-                || !userAccountService.userOwnsCharacter(authUser.getId(),
-                    Long.parseLong(characterId)))
+            // Check basic authorization.
+            if (authUser == null || authUser.getId() == null)
             {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN);
             }
+
+            // Retrieve the character to check if it is in the right instance
+            // and if the user is authorized to edit it.
+            CharacterDto character = characterService
+                .retrieveCharacter(Long.parseLong(characterId));
+
+            if (!character.getInstance().getId()
+                .equals(Long.parseLong(instanceId)))
+            {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+            }
+            else if (!userAccountService.userOwnsCharacter(authUser.getId(),
+                character.getId()))
+            {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+            }
+
+            // Edit and return it.
+            character = characterService.updateCharacter(character.getId(),
+                updatedCharacter);
+
+            MappingJacksonValue returnValue = new MappingJacksonValue(
+                character);
+            returnValue.setFilters(CharacterDtoFilters.fullFilterProvider);
+
+            return ResponseEntity.ok(returnValue);
+        }
+        catch (CharacterServiceException ex)
+        {
+            switch (ex.getCode())
+            {
+            case CHARACTER_NOT_FOUND:
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, null,
+                    ex);
+            case NULL_CHARACTER_OBJECT:
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, null,
+                    ex);
+            default:
+                throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR, null, ex);
+            }
+        }
+        catch (NumberFormatException ex)
+        {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, null, ex);
         }
         catch (Exception ex)
         {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
                 null, ex);
         }
-
-        return ResponseEntity.notFound().build();
     }
 
     @DeleteMapping("/instances/{instanceId}/characters/{characterId}")
@@ -99,20 +249,54 @@ public class CharacterController
     {
         try
         {
-            if (authUser == null || authUser.getId() == null
-                || !userAccountService.userOwnsCharacter(authUser.getId(),
-                    Long.parseLong(characterId)))
+            // Check basic authorization.
+            if (authUser == null || authUser.getId() == null)
             {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN);
             }
+
+            // Retrieve the character to check if it is in the right instance
+            // and if the user is authorized to delete it.
+            CharacterDto character = characterService
+                .retrieveCharacter(Long.parseLong(characterId));
+
+            if (!character.getInstance().getId()
+                .equals(Long.parseLong(instanceId)))
+            {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+            }
+            else if (!userAccountService.userOwnsCharacter(authUser.getId(),
+                character.getId()))
+            {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+            }
+
+            // Delete it and return 204.
+            characterService.deleteCharacter(character.getId());
+
+            return ResponseEntity.noContent().build();
+        }
+        catch (CharacterServiceException ex)
+        {
+            switch (ex.getCode())
+            {
+            case CHARACTER_NOT_FOUND:
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, null,
+                    ex);
+            default:
+                throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR, null, ex);
+            }
+        }
+        catch (NumberFormatException ex)
+        {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, null, ex);
         }
         catch (Exception ex)
         {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
                 null, ex);
         }
-
-        return ResponseEntity.notFound().build();
     }
 
     //
@@ -123,7 +307,44 @@ public class CharacterController
     public ResponseEntity<MappingJacksonValue> retrieveCharacterListForMaintainer(
         @PathVariable String instanceId, @PathVariable String maintainerId)
     {
-        return ResponseEntity.notFound().build();
+        try
+        {
+            MaintainerDto maintainer = userAccountService
+                .retrieveMaintainer(Long.parseLong(maintainerId));
+
+            if (!maintainer.getInstance().getId()
+                .equals(Long.parseLong(instanceId)))
+            {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+            }
+
+            MappingJacksonValue returnValue = new MappingJacksonValue(
+                maintainer.getCharacters());
+            returnValue.setFilters(CharacterDtoFilters.simpleFilterProvider);
+
+            return ResponseEntity.ok(returnValue);
+        }
+        catch (UserAccountServiceException ex)
+        {
+            switch (ex.getCode())
+            {
+            case ACCOUNT_NOT_FOUND:
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, null,
+                    ex);
+            default:
+                throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR, null, ex);
+            }
+        }
+        catch (NumberFormatException ex)
+        {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, null, ex);
+        }
+        catch (Exception ex)
+        {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                null, ex);
+        }
     }
 
     @PostMapping("/instances/{instanceId}/maintainers/{maintainerId}/characters")
@@ -139,14 +360,47 @@ public class CharacterController
             {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN);
             }
+
+            MaintainerDto maintainer = userAccountService
+                .retrieveMaintainer(Long.parseLong(maintainerId));
+
+            if (!maintainer.getInstance().getId()
+                .equals(Long.parseLong(instanceId)))
+            {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+            }
+
+            CharacterDto character = characterService
+                .createCharacterForMaintainer(maintainer);
+
+            MappingJacksonValue returnValue = new MappingJacksonValue(
+                character);
+            returnValue.setFilters(CharacterDtoFilters.fullFilterProvider);
+
+            return ResponseEntity.ok(returnValue);
+        }
+        catch (UserAccountServiceException ex)
+        {
+            switch (ex.getCode())
+            {
+            case ACCOUNT_NOT_FOUND:
+            case INVALID_ROLE:
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, null,
+                    ex);
+            default:
+                throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR, null, ex);
+            }
+        }
+        catch (NumberFormatException ex)
+        {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, null, ex);
         }
         catch (Exception ex)
         {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
                 null, ex);
         }
-
-        return ResponseEntity.notFound().build();
     }
 
     //
@@ -155,8 +409,44 @@ public class CharacterController
 
     @GetMapping("/instances/{instanceId}/groups/{groupId}/characters")
     public ResponseEntity<MappingJacksonValue> retrieveCharacterListForGroup(
-        @PathVariable String instanceId, @PathVariable String maintainerId)
+        @PathVariable String instanceId, @PathVariable String groupId)
     {
-        return ResponseEntity.notFound().build();
+        try
+        {
+            CharacterGroupDto group = characterService
+                .retrieveCharacterGroup(Long.parseLong(groupId));
+
+            if (!group.getInstance().getId().equals(Long.parseLong(instanceId)))
+            {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+            }
+
+            MappingJacksonValue returnValue = new MappingJacksonValue(
+                group.getCharacters());
+            returnValue.setFilters(CharacterDtoFilters.simpleFilterProvider);
+
+            return ResponseEntity.ok(returnValue);
+        }
+        catch (CharacterServiceException ex)
+        {
+            switch (ex.getCode())
+            {
+            case CHARACTER_GROUP_NOT_FOUND:
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, null,
+                    ex);
+            default:
+                throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR, null, ex);
+            }
+        }
+        catch (NumberFormatException ex)
+        {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, null, ex);
+        }
+        catch (Exception ex)
+        {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                null, ex);
+        }
     }
 }

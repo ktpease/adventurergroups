@@ -15,8 +15,14 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.server.ResponseStatusException;
 
+import ktpweb.adventurergroups.exception.InstanceServiceException;
+import ktpweb.adventurergroups.exception.UserAccountServiceException;
 import ktpweb.adventurergroups.model.InstanceDto;
+import ktpweb.adventurergroups.model.MaintainerDto;
+import ktpweb.adventurergroups.model.UserAccountDto;
+import ktpweb.adventurergroups.modelfilter.MaintainerDtoFilters;
 import ktpweb.adventurergroups.security.User;
+import ktpweb.adventurergroups.service.InstanceService;
 import ktpweb.adventurergroups.service.UserAccountService;
 import lombok.extern.slf4j.Slf4j;
 
@@ -28,6 +34,9 @@ public class MaintainerAccountController
     @Autowired
     private UserAccountService userAccountService;
 
+    @Autowired
+    private InstanceService instanceService;
+
     //
     // Direct endpoints.
     //
@@ -36,7 +45,38 @@ public class MaintainerAccountController
     public ResponseEntity<MappingJacksonValue> retrieveMaintainerList(
         @PathVariable String instanceId)
     {
-        return ResponseEntity.notFound().build();
+        try
+        {
+            InstanceDto instance = instanceService
+                .retrieveInstance(Long.parseLong(instanceId));
+
+            MappingJacksonValue returnValue = new MappingJacksonValue(
+                instance.getMaintainers());
+            returnValue.setFilters(MaintainerDtoFilters.simpleFilterProvider);
+
+            return ResponseEntity.ok(returnValue);
+        }
+        catch (InstanceServiceException ex)
+        {
+            switch (ex.getCode())
+            {
+            case INSTANCE_NOT_FOUND:
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, null,
+                    ex);
+            default:
+                throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR, null, ex);
+            }
+        }
+        catch (NumberFormatException ex)
+        {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, null, ex);
+        }
+        catch (Exception ex)
+        {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                null, ex);
+        }
     }
 
     @PostMapping("/instances/{instanceId}/maintainers")
@@ -51,31 +91,93 @@ public class MaintainerAccountController
             {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN);
             }
+
+            InstanceDto instance = instanceService
+                .retrieveInstance(Long.parseLong(instanceId));
+
+            MaintainerDto maintainer = userAccountService
+                .createUnregisteredMaintainer(instance);
+
+            MappingJacksonValue returnValue = new MappingJacksonValue(
+                maintainer);
+            returnValue.setFilters(MaintainerDtoFilters.fullFilterProvider);
+
+            return ResponseEntity.ok(returnValue);
+        }
+        catch (InstanceServiceException ex)
+        {
+            switch (ex.getCode())
+            {
+            case INSTANCE_NOT_FOUND:
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, null,
+                    ex);
+            default:
+                throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR, null, ex);
+            }
+        }
+        catch (NumberFormatException ex)
+        {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, null, ex);
         }
         catch (Exception ex)
         {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
                 null, ex);
         }
-
-        return ResponseEntity.notFound().build();
     }
 
     @GetMapping("/instances/{instanceId}/maintainers/{maintainerId}")
     public ResponseEntity<MappingJacksonValue> retrieveMaintainer(
         @PathVariable String instanceId, @PathVariable String maintainerId)
     {
-        return ResponseEntity.notFound().build();
+        try
+        {
+            MaintainerDto maintainer = userAccountService
+                .retrieveMaintainer(Long.parseLong(maintainerId));
+
+            if (maintainer.getInstance().getId()
+                .equals(Long.parseLong(maintainerId)))
+            {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+            }
+
+            MappingJacksonValue returnValue = new MappingJacksonValue(
+                maintainer);
+            returnValue.setFilters(MaintainerDtoFilters.fullFilterProvider);
+
+            return ResponseEntity.ok(returnValue);
+        }
+        catch (UserAccountServiceException ex)
+        {
+            switch (ex.getCode())
+            {
+            case ACCOUNT_NOT_FOUND:
+            case INVALID_ROLE:
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, null,
+                    ex);
+            default:
+                throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR, null, ex);
+            }
+        }
+        catch (NumberFormatException ex)
+        {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, null, ex);
+        }
+        catch (Exception ex)
+        {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                null, ex);
+        }
     }
 
     @PatchMapping("/instances/{instanceId}/maintainers/{maintainerId}")
     public ResponseEntity<MappingJacksonValue> updateMaintainer(
         @PathVariable String instanceId, @PathVariable String maintainerId,
-        @RequestBody InstanceDto updatedInstance,
+        @RequestBody UserAccountDto updatedAccount,
         @AuthenticationPrincipal User authUser)
     {
-        // TODO: Who should have authority to register user account?
-
         try
         {
             if (authUser == null || authUser.getId() == null
@@ -85,14 +187,54 @@ public class MaintainerAccountController
             {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN);
             }
+
+            MaintainerDto maintainer = userAccountService
+                .retrieveMaintainer(Long.parseLong(maintainerId));
+
+            if (!maintainer.getInstance().getId()
+                .equals(Long.parseLong(instanceId)))
+            {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+            }
+
+            maintainer = userAccountService
+                .registerOrUpdateMaintainer(maintainer.getId(), updatedAccount);
+
+            MappingJacksonValue returnValue = new MappingJacksonValue(
+                maintainer);
+            returnValue.setFilters(MaintainerDtoFilters.fullFilterProvider);
+
+            return ResponseEntity.ok(returnValue);
+        }
+        catch (UserAccountServiceException ex)
+        {
+            switch (ex.getCode())
+            {
+            case ACCOUNT_NOT_FOUND:
+            case INVALID_ROLE:
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, null,
+                    ex);
+            case NULL_ACCOUNT_OBJECT:
+            case INVALID_USERNAME:
+            case INVALID_PASSWORD:
+            case INVALID_EMAIL:
+            case ACCOUNT_ALREADY_EXISTS:
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, null,
+                    ex);
+            default:
+                throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR, null, ex);
+            }
+        }
+        catch (NumberFormatException ex)
+        {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, null, ex);
         }
         catch (Exception ex)
         {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
                 null, ex);
         }
-
-        return ResponseEntity.notFound().build();
     }
 
     @DeleteMapping("/instances/{instanceId}/maintainers/{maintainerId}")
@@ -109,13 +251,41 @@ public class MaintainerAccountController
             {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN);
             }
+
+            MaintainerDto maintainer = userAccountService
+                .retrieveMaintainer(Long.parseLong(maintainerId));
+
+            if (!maintainer.getInstance().getId()
+                .equals(Long.parseLong(instanceId)))
+            {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+            }
+
+            userAccountService.deleteMaintainer(maintainer.getId());
+
+            return ResponseEntity.noContent().build();
+        }
+        catch (UserAccountServiceException ex)
+        {
+            switch (ex.getCode())
+            {
+            case ACCOUNT_NOT_FOUND:
+            case INVALID_ROLE:
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, null,
+                    ex);
+            default:
+                throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR, null, ex);
+            }
+        }
+        catch (NumberFormatException ex)
+        {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, null, ex);
         }
         catch (Exception ex)
         {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
                 null, ex);
         }
-        
-        return ResponseEntity.notFound().build();
     }
 }

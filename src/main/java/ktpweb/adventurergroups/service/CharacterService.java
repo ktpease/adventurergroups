@@ -228,6 +228,10 @@ public class CharacterService
                     CharacterServiceException.Codes.DATABASE_ERROR_READ, ex);
             }
         }
+        else
+        {
+            characterEntity.setMaintainer(null);
+        }
 
         if (characterUpdate.getCharacterGroup() != null)
         {
@@ -243,6 +247,10 @@ public class CharacterService
                         + ". Error reading from database",
                     CharacterServiceException.Codes.DATABASE_ERROR_READ, ex);
             }
+        }
+        else
+        {
+            characterEntity.setCharacterGroup(null);
         }
 
         try

@@ -15,8 +15,14 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.server.ResponseStatusException;
 
+import ktpweb.adventurergroups.exception.CharacterServiceException;
+import ktpweb.adventurergroups.exception.InstanceServiceException;
 import ktpweb.adventurergroups.model.CharacterGroupDto;
+import ktpweb.adventurergroups.model.InstanceDto;
+import ktpweb.adventurergroups.modelfilter.CharacterGroupDtoFilters;
 import ktpweb.adventurergroups.security.User;
+import ktpweb.adventurergroups.service.CharacterService;
+import ktpweb.adventurergroups.service.InstanceService;
 import ktpweb.adventurergroups.service.UserAccountService;
 import lombok.extern.slf4j.Slf4j;
 
@@ -27,7 +33,13 @@ public class CharacterGroupController
 {
     @Autowired
     private UserAccountService userAccountService;
-    
+
+    @Autowired
+    private CharacterService characterService;
+
+    @Autowired
+    private InstanceService instanceService;
+
     //
     // Direct endpoints.
     //
@@ -36,7 +48,39 @@ public class CharacterGroupController
     public ResponseEntity<MappingJacksonValue> retrieveGroupList(
         @PathVariable String instanceId)
     {
-        return ResponseEntity.notFound().build();
+        try
+        {
+            InstanceDto instance = instanceService
+                .retrieveInstance(Long.parseLong(instanceId));
+
+            MappingJacksonValue returnValue = new MappingJacksonValue(
+                instance.getCharacterGroups());
+            returnValue
+                .setFilters(CharacterGroupDtoFilters.simpleFilterProvider);
+
+            return ResponseEntity.ok(returnValue);
+        }
+        catch (InstanceServiceException ex)
+        {
+            switch (ex.getCode())
+            {
+            case INSTANCE_NOT_FOUND:
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, null,
+                    ex);
+            default:
+                throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR, null, ex);
+            }
+        }
+        catch (NumberFormatException ex)
+        {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, null, ex);
+        }
+        catch (Exception ex)
+        {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                null, ex);
+        }
     }
 
     @PostMapping("/instances/{instanceId}/groups")
@@ -51,21 +95,82 @@ public class CharacterGroupController
             {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN);
             }
+
+            InstanceDto instance = instanceService
+                .retrieveInstance(Long.parseLong(instanceId));
+
+            CharacterGroupDto characterGroup = characterService
+                .createCharacterGroup(instance);
+
+            MappingJacksonValue returnValue = new MappingJacksonValue(
+                characterGroup);
+            returnValue.setFilters(CharacterGroupDtoFilters.fullFilterProvider);
+
+            return ResponseEntity.ok(returnValue);
+        }
+        catch (InstanceServiceException ex)
+        {
+            switch (ex.getCode())
+            {
+            case INSTANCE_NOT_FOUND:
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, null,
+                    ex);
+            default:
+                throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR, null, ex);
+            }
+        }
+        catch (NumberFormatException ex)
+        {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, null, ex);
         }
         catch (Exception ex)
         {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
                 null, ex);
         }
-        
-        return ResponseEntity.notFound().build();
     }
 
     @GetMapping("/instances/{instanceId}/groups/{groupId}")
     public ResponseEntity<MappingJacksonValue> retrieveGroup(
         @PathVariable String instanceId, @PathVariable String groupId)
     {
-        return ResponseEntity.notFound().build();
+        try
+        {
+            CharacterGroupDto group = characterService
+                .retrieveCharacterGroup(Long.parseLong(groupId));
+
+            if (!group.getInstance().getId().equals(Long.parseLong(instanceId)))
+            {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+            }
+
+            MappingJacksonValue returnValue = new MappingJacksonValue(group);
+            returnValue.setFilters(CharacterGroupDtoFilters.fullFilterProvider);
+
+            return ResponseEntity.ok(returnValue);
+        }
+        catch (CharacterServiceException ex)
+        {
+            switch (ex.getCode())
+            {
+            case CHARACTER_GROUP_NOT_FOUND:
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, null,
+                    ex);
+            default:
+                throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR, null, ex);
+            }
+        }
+        catch (NumberFormatException ex)
+        {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, null, ex);
+        }
+        catch (Exception ex)
+        {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                null, ex);
+        }
     }
 
     @PutMapping("/instances/{instanceId}/groups/{groupId}")
@@ -82,14 +187,44 @@ public class CharacterGroupController
             {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN);
             }
+
+            CharacterGroupDto group = characterService
+                .retrieveCharacterGroup(Long.parseLong(groupId));
+
+            if (!group.getInstance().getId().equals(Long.parseLong(instanceId)))
+            {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+            }
+
+            group = characterService.updateCharacterGroup(group.getId(),
+                updatedGroup);
+
+            MappingJacksonValue returnValue = new MappingJacksonValue(group);
+            returnValue.setFilters(CharacterGroupDtoFilters.fullFilterProvider);
+
+            return ResponseEntity.ok(returnValue);
+        }
+        catch (CharacterServiceException ex)
+        {
+            switch (ex.getCode())
+            {
+            case CHARACTER_GROUP_NOT_FOUND:
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, null,
+                    ex);
+            default:
+                throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR, null, ex);
+            }
+        }
+        catch (NumberFormatException ex)
+        {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, null, ex);
         }
         catch (Exception ex)
         {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
                 null, ex);
         }
-
-        return ResponseEntity.notFound().build();
     }
 
     @DeleteMapping("/instances/{instanceId}/groups/{groupId}")
@@ -104,13 +239,41 @@ public class CharacterGroupController
             {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN);
             }
+
+            // Retrieve the group to check if it is in the right instance.
+            CharacterGroupDto group = characterService
+                .retrieveCharacterGroup(Long.parseLong(groupId));
+
+            if (!group.getInstance().getId().equals(Long.parseLong(instanceId)))
+            {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+            }
+
+            // Delete it and return 204.
+            characterService.deleteCharacterGroup(group.getId());
+
+            return ResponseEntity.noContent().build();
+        }
+        catch (CharacterServiceException ex)
+        {
+            switch (ex.getCode())
+            {
+            case CHARACTER_GROUP_NOT_FOUND:
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, null,
+                    ex);
+            default:
+                throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR, null, ex);
+            }
+        }
+        catch (NumberFormatException ex)
+        {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, null, ex);
         }
         catch (Exception ex)
         {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
                 null, ex);
         }
-        
-        return ResponseEntity.notFound().build();
     }
 }

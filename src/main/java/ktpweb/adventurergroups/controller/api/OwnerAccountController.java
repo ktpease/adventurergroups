@@ -43,9 +43,9 @@ public class OwnerAccountController
 
         try
         {
-            OwnerDto ownerDto = userAccountService.createOwner(newAccount);
+            OwnerDto owner = userAccountService.createOwner(newAccount);
 
-            MappingJacksonValue returnValue = new MappingJacksonValue(ownerDto);
+            MappingJacksonValue returnValue = new MappingJacksonValue(owner);
             returnValue.setFilters(OwnerDtoFilters.fullFilterProvider);
 
             return ResponseEntity.ok(returnValue);
@@ -55,8 +55,6 @@ public class OwnerAccountController
             switch (ex.getCode())
             {
             case INVALID_USERNAME:
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, null,
-                    ex);
             case INVALID_PASSWORD:
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, null,
                     ex);
@@ -81,10 +79,10 @@ public class OwnerAccountController
     {
         try
         {
-            OwnerDto ownerDto = userAccountService
+            OwnerDto owner = userAccountService
                 .retrieveOwner(Long.parseLong(ownerId));
 
-            MappingJacksonValue returnValue = new MappingJacksonValue(ownerDto);
+            MappingJacksonValue returnValue = new MappingJacksonValue(owner);
             returnValue.setFilters(OwnerDtoFilters.fullFilterProvider);
 
             return ResponseEntity.ok(returnValue);
@@ -101,6 +99,10 @@ public class OwnerAccountController
                 throw new ResponseStatusException(
                     HttpStatus.INTERNAL_SERVER_ERROR, null, ex);
             }
+        }
+        catch (NumberFormatException ex)
+        {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, null, ex);
         }
         catch (Exception ex)
         {
@@ -115,18 +117,18 @@ public class OwnerAccountController
         @RequestBody UserAccountDto updatedAccount,
         @AuthenticationPrincipal User authUser)
     {
-        if (authUser == null || authUser.getId() == null
-            || !authUser.getId().equals(Long.parseLong(ownerId)))
-        {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
-        }
-
         try
         {
-            OwnerDto ownerDto = userAccountService
+            if (authUser == null || authUser.getId() == null
+                || !authUser.getId().equals(Long.parseLong(ownerId)))
+            {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+            }
+
+            OwnerDto owner = userAccountService
                 .updateOwner(Long.parseLong(ownerId), updatedAccount);
 
-            MappingJacksonValue returnValue = new MappingJacksonValue(ownerDto);
+            MappingJacksonValue returnValue = new MappingJacksonValue(owner);
             returnValue.setFilters(OwnerDtoFilters.fullFilterProvider);
 
             return ResponseEntity.ok(returnValue);
@@ -140,12 +142,20 @@ public class OwnerAccountController
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND, null,
                     ex);
             case NULL_ACCOUNT_OBJECT:
+            case INVALID_USERNAME:
+            case INVALID_PASSWORD:
+            case INVALID_EMAIL:
+            case ACCOUNT_ALREADY_EXISTS:
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, null,
                     ex);
             default:
                 throw new ResponseStatusException(
                     HttpStatus.INTERNAL_SERVER_ERROR, null, ex);
             }
+        }
+        catch (NumberFormatException ex)
+        {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, null, ex);
         }
         catch (Exception ex)
         {
@@ -158,14 +168,14 @@ public class OwnerAccountController
     public ResponseEntity<?> deleteOwnerAccount(@PathVariable String ownerId,
         @AuthenticationPrincipal User authUser)
     {
-        if (authUser == null || authUser.getId() == null
-            || !authUser.getId().equals(Long.parseLong(ownerId)))
-        {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
-        }
-
         try
         {
+            if (authUser == null || authUser.getId() == null
+                || !authUser.getId().equals(Long.parseLong(ownerId)))
+            {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+            }
+
             userAccountService.deleteOwner(Long.parseLong(ownerId));
 
             return ResponseEntity.noContent().build();
@@ -182,6 +192,10 @@ public class OwnerAccountController
                 throw new ResponseStatusException(
                     HttpStatus.INTERNAL_SERVER_ERROR, null, ex);
             }
+        }
+        catch (NumberFormatException ex)
+        {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, null, ex);
         }
         catch (Exception ex)
         {

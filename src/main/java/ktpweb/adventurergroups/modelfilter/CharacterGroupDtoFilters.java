@@ -9,7 +9,7 @@ public class CharacterGroupDtoFilters
 
     protected static String[] simpleFilter = { "id", "name" };
 
-    protected static String[] fullFilter = { "id", "name", "properties",
+    protected static String[] fullFilter = { "id", "name", "description",
             "colorPrimary", "createDate", "instance", "characters" };
 
     public static FilterProvider simpleFilterProvider = new SimpleFilterProvider()
